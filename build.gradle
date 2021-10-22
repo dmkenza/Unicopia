@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id "org.jetbrains.kotlin.jvm"
     id 'fabric-loom' version '0.8-SNAPSHOT'
     id 'org.ajoberstar.reckon' version '0.13.0'
 }
@@ -46,12 +47,13 @@ dependencies {
     modApi "net.fabricmc:fabric-loader:${project.loader_version}"
     modApi "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 
-    modApi "com.minelittlepony:minelittlepony:${project.minelp_version}"
+    modImplementation "net.fabricmc:fabric-language-kotlin:${project.fabric_kotlin_version}"
 
+    modApi "com.minelittlepony:minelittlepony:${project.minelp_version}"
     modApi "com.minelittlepony:kirin:${project.kirin_version}"
     include "com.minelittlepony:kirin:${project.kirin_version}"
-
     modCompileOnly("com.terraformersmc:modmenu:${project.modmenu_version}")
+
 }
 
 processResources {
@@ -70,3 +72,5 @@ task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = "sources"
     from sourceSets.main.allSource
 }
+
+compileKotlin.kotlinOptions.jvmTarget = "16"

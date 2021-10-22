@@ -36,6 +36,7 @@
     "fabric-events-lifecycle-v0": ">=0.1.0",
     "fabric-keybindings-v0": ">=0.1.0",
     "fabric-rendering-v1": ">=0.1.0",
+    "fabric-language-kotlin": "*",
     "kirin": "*"
   },
   "suggests": {
