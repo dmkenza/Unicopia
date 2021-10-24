@@ -1,6 +1,7 @@
 package com.minelittlepony.unicopia.client.render;
 
 import com.minelittlepony.common.util.Color;
+import com.minelittlepony.unicopia.client.render.BraceletFeatureRenderer.BraceletModel;
 import com.minelittlepony.unicopia.item.FriendshipBraceletItem;
 import com.minelittlepony.unicopia.item.GlowableItem;
 

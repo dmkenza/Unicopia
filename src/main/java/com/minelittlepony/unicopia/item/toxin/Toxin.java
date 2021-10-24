@@ -17,7 +17,7 @@ import net.minecraft.util.ChatUtil;
 import net.minecraft.world.Difficulty;
 
 public interface Toxin extends Affliction {
-    Predicate IF_NOT_PEACEFUL = Predicate.of(Text.of("when not in peaceful "), (player, stack) -> player.world.getDifficulty() != Difficulty.PEACEFUL);
+    com.minelittlepony.unicopia.item.toxin.Toxin.Predicate IF_NOT_PEACEFUL = com.minelittlepony.unicopia.item.toxin.Toxin.Predicate.of(Text.of("when not in peaceful "), (player, stack) -> player.world.getDifficulty() != Difficulty.PEACEFUL);
 
     Toxin INNERT = of(Text.of("No Effect"), (player, stack) -> {});
 
@@ -46,7 +46,7 @@ public interface Toxin extends Affliction {
     }
 
     default Toxin withChance(int max) {
-        return Predicate.of(Text.of("1 in " + max + " chance of "), (player, stack) -> player.world.random.nextInt(max) == 0).then(this);
+        return com.minelittlepony.unicopia.item.toxin.Toxin.Predicate.of(Text.of("1 in " + max + " chance of "), (player, stack) -> player.world.random.nextInt(max) == 0).then(this);
     }
 
     Text getName();
@@ -109,8 +109,8 @@ public interface Toxin extends Affliction {
     }
 
     interface Predicate {
-        static Predicate of(Text name, Affliction.Predicate predicate) {
-            return new Predicate() {
+        static com.minelittlepony.unicopia.item.toxin.Toxin.Predicate of(Text name, Affliction.Predicate predicate) {
+            return new com.minelittlepony.unicopia.item.toxin.Toxin.Predicate() {
                 @Override
                 public boolean test(PlayerEntity player, ItemStack stack) {
                     return predicate.test(player, stack);
@@ -138,7 +138,7 @@ public interface Toxin extends Affliction {
 
                 @Override
                 public Text getName() {
-                    return Predicate.this.getName().shallowCopy().append(toxin.getName());
+                    return com.minelittlepony.unicopia.item.toxin.Toxin.Predicate.this.getName().shallowCopy().append(toxin.getName());
                 }
             };
         }

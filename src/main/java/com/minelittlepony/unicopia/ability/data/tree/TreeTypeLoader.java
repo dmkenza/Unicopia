@@ -8,6 +8,8 @@ import java.util.function.Supplier;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.minelittlepony.unicopia.ability.data.tree.TreeTypeLoader.TreeTypeDef;
+import com.minelittlepony.unicopia.ability.data.tree.TreeTypeLoader.TreeTypeDef.Drop;
 import com.minelittlepony.unicopia.util.PosHelper;
 import com.minelittlepony.unicopia.util.Resources;
 import com.minelittlepony.unicopia.util.Weighted;

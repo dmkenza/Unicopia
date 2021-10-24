@@ -2,7 +2,7 @@ package com.minelittlepony.unicopia.client.render;
 
 import java.util.HashMap;
 import java.util.Map;
-
+import com.minelittlepony.unicopia.client.render.AmuletFeatureRenderer.AmuletModel;
 import com.minelittlepony.unicopia.item.AmuletItem;
 
 import net.minecraft.client.model.Dilation;

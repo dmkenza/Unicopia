@@ -56,7 +56,7 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
                 .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 9000)
                 .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 100)
                 .add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 20)
-            .build());
+                .build());
     }
 
     @Override
@@ -79,7 +79,7 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
 
     @Override
     public ParticleEffect getParticleEffect(IItemEntity entity) {
-        return ((ItemEntity)entity).world.random.nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
+        return ((ItemEntity) entity).world.random.nextBoolean() ? ParticleTypes.LARGE_SMOKE : ParticleTypes.FLAME;
     }
 
     @Override
@@ -99,23 +99,23 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
 
     @Override
     public void interactWithPlayer(IItemEntity item, PlayerEntity player) {
-        ItemEntity entity = (ItemEntity)item;
+        ItemEntity entity = (ItemEntity) item;
 
         if (!player.world.isClient && !entity.isRemoved()) {
             if (player.getPos().distanceTo(entity.getPos()) < 0.5) {
-               if (entity.world.random.nextInt(150) == 0) {
-                   entity.setPickupDelay(0);
-                   entity.onPlayerCollision(player);
+                if (entity.world.random.nextInt(150) == 0) {
+                    entity.setPickupDelay(0);
+                    entity.onPlayerCollision(player);
 
-                   if (player.getMainHandStack().getItem() == this) {
-                       TypedActionResult<ItemStack> result = use(player.world, player, Hand.MAIN_HAND);
+                    if (player.getMainHandStack().getItem() == this) {
+                        TypedActionResult<ItemStack> result = use(player.world, player, Hand.MAIN_HAND);
 
-                       if (result.getResult() == ActionResult.SUCCESS) {
-                           entity.setPickupDelay(1000);
-                           entity.setRemoved(RemovalReason.DISCARDED);
-                       }
-                   }
-               }
+                        if (result.getResult() == ActionResult.SUCCESS) {
+                            entity.setPickupDelay(1000);
+                            entity.setRemoved(RemovalReason.DISCARDED);
+                        }
+                    }
+                }
             }
         }
     }
@@ -148,7 +148,7 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
             return;
         }
 
-        PlayerEntity player = (PlayerEntity)entity;
+        PlayerEntity player = (PlayerEntity) entity;
 
         if (selected && !isApplicable(player) && world.random.nextInt(320) == 0) {
             use(world, player, Hand.MAIN_HAND);
@@ -203,14 +203,14 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
             }, 50);
         }
 
-        pony.findAllEntitiesInRange(10, e -> e instanceof MobEntity && !((MobEntity)e).hasStatusEffect(UEffects.CORRUPT_INFLUENCE)).forEach(e -> {
-            ((MobEntity)e).addStatusEffect(new StatusEffectInstance(UEffects.CORRUPT_INFLUENCE, 1300, 1));
+        pony.findAllEntitiesInRange(10, e -> e instanceof MobEntity && !((MobEntity) e).hasStatusEffect(UEffects.CORRUPT_INFLUENCE)).forEach(e -> {
+            ((MobEntity) e).addStatusEffect(new StatusEffectInstance(UEffects.CORRUPT_INFLUENCE, 1300, 1));
         });
     }
 
     @Override
     public ActionResult onGroundTick(IItemEntity item) {
-        ItemEntity entity = (ItemEntity)item;
+        ItemEntity entity = (ItemEntity) item;
 
         if (entity.world.random.nextInt(500) == 0) {
             entity.world.playSound(null, entity.getBlockPos(), SoundEvents.AMBIENT_CAVE, SoundCategory.HOSTILE, 0.5F, 1);
@@ -230,7 +230,7 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
         });
         public static final Trick POKE = new Trick(13000, 300, player -> player.damage(MagicalDamageSource.ALICORN_AMULET, 1F));
         public static final Trick SPIN = new Trick(6000, 300, player -> player.setYaw(player.getYaw() + 180));
-        public static final Trick BUTTER_FINGERS = new Trick(1000, 300, player -> player.dropSelectedItem(false));
+        public static final Trick BUTTER_FINGERS = new Trick(1000, 300, player -> player.dropStack(player.getMainHandStack()));
         public static final Trick MOVE = new Trick(3000, 300, player -> {
             float amount = player.world.random.nextFloat() - 0.5F;
             boolean sideways = player.world.random.nextBoolean();

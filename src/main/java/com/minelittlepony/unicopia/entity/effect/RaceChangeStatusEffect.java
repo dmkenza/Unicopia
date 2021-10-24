@@ -5,6 +5,7 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.entity.Equine;
+import com.minelittlepony.unicopia.entity.effect.RaceChangeStatusEffect.Stage;
 import com.minelittlepony.unicopia.entity.player.MagicReserves;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
@@ -13,8 +14,8 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffect;
+import net.minecraft.entity.effect.StatusEffectCategory;
 import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffectType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.text.Text;
@@ -35,7 +36,7 @@ public class RaceChangeStatusEffect extends StatusEffect {
     private final Race species;
 
     protected RaceChangeStatusEffect(int color, Race species) {
-        super(StatusEffectType.NEUTRAL, color);
+        super(StatusEffectCategory.NEUTRAL, color);
         this.species = species;
 
         Registry.register(Registry.STATUS_EFFECT, new Identifier("unicopia", "change_race_" + species.name().toLowerCase()), this);

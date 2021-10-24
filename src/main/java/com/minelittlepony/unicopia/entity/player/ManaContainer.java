@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia.entity.player;
 
+import com.minelittlepony.unicopia.entity.player.ManaContainer.BarInst;
+import com.minelittlepony.unicopia.entity.player.ManaContainer.XpCollectingBar;
 import com.minelittlepony.unicopia.util.Tickable;
 
 import net.minecraft.entity.data.TrackedData;

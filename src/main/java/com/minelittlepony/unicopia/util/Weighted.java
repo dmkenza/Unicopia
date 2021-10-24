@@ -8,6 +8,7 @@ import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 
 import com.google.common.collect.Lists;
+import com.minelittlepony.unicopia.util.Weighted.Entry;
 
 public class Weighted<T> {
 

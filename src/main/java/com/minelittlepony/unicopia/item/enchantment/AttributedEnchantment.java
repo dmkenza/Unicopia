@@ -6,7 +6,7 @@ import java.util.Map;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
 import com.minelittlepony.unicopia.entity.Living;
-
+import com.minelittlepony.unicopia.item.enchantment.AttributedEnchantment.ModifierFactory;
 import net.minecraft.enchantment.EnchantmentTarget;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
