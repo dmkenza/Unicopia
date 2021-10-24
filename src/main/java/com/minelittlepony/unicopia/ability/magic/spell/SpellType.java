@@ -48,7 +48,7 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
 
     private final Identifier id;
     private final Affinity affinity;
-    private final int color;
+    private int color;
     private final boolean obtainable;
 
     private final Factory<T> factory;
@@ -92,6 +92,10 @@ public final class SpellType<T extends Spell> implements Affine, SpellPredicate<
      */
     public int getColor() {
         return color;
+    }
+
+    public void setColor(int color) {
+        this.color = color;
     }
 
     @Override

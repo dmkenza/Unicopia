@@ -1,5 +1,7 @@
 package com.minelittlepony.unicopia;
 
+import kenza.Items;
+import kenza.Test1;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
@@ -47,6 +49,10 @@ public class Unicopia implements ModInitializer {
         UCriteria.bootstrap();
         UEntities.bootstrap();
         Commands.bootstrap();
+
+        Items.INSTANCE.registerModItems();
+
+        new Test1().test();
 
         ServerTickEvents.END_WORLD_TICK.register(w -> {
             AwaitTickQueue.tick(w);

@@ -82,7 +82,7 @@ public interface Thrown extends Spell, ProjectileDelegate {
             projectile.setItem(getCastAppearance(caster));
             projectile.setThrowDamage(getThrowDamage(caster));
             projectile.setSpell(this);
-            projectile.setHydrophobic();
+//            projectile.setHydrophobic();
             projectile.setProperties(entity, entity.getPitch(), entity.getYaw(), 0, 1.5F, 1);
 
             world.spawnEntity(projectile);
