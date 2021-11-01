@@ -22,6 +22,7 @@ import net.minecraft.world.World
 
 class KFireSpell(type: SpellType<*>?) : FireSpell(type) {
 
+    private val EFFECT_RADIUS = 3.0
 
     override fun onImpact(projectile: MagicProjectileEntity, pos: BlockPos, state: BlockState) {
 //        super.onImpact(projectile, pos, state)
