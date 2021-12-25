@@ -66,7 +66,7 @@ public class UnicornTeleportAbility implements Ability<Pos> {
 
     @Override
     public Pos tryActivate(Pony player) {
-        int maxDistance = player.getMaster().isCreative() ? 1000 : 100;
+        int maxDistance = player.getMaster().isCreative() ? 1000 : 30;
         HitResult ray = RayTraceHelper.doTrace(player.getMaster(), maxDistance, 1, EntityPredicates.EXCEPT_SPECTATOR).getResult();
 
         World w = player.getWorld();
