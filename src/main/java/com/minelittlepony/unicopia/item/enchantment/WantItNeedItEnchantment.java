@@ -11,7 +11,7 @@ import net.minecraft.entity.EquipmentSlot;
 public class WantItNeedItEnchantment extends SimpleEnchantment {
 
     protected WantItNeedItEnchantment() {
-        super(Rarity.VERY_RARE, true, 1, EquipmentSlot.values());
+        super(Rarity.COMMON, true, 0, EquipmentSlot.values());
     }
 
     @Override
