@@ -66,7 +66,7 @@ abstract class MixinItem implements ToxicHolder, ItemImpl.TickableItem {
         if (!toxic.isPresent() && ((Item)(Object)this).getFoodComponent() != null) {
             return Optional.of(Toxics.EDIBLE);
         }
-        return toxic;
+        return Optional.empty();
     }
 
     @Inject(method = "finishUsing", at = @At("HEAD"), cancellable = true)

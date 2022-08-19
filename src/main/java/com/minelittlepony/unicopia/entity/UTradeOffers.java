@@ -24,15 +24,15 @@ import net.minecraft.village.VillagerProfession;
 public interface UTradeOffers {
     static void bootstrap() {
         TradeOfferHelper.registerVillagerOffers(VillagerProfession.MASON, 1, factories -> {
-            factories.add(buyForEmeralds(UItems.GEMSTONE, 1, 1, 30, 2, 0.05F));
+//            factories.add(buyForEmeralds(UItems.GEMSTONE, 1, 1, 30, 2, 0.05F));
         });
         TradeOfferHelper.registerVillagerOffers(VillagerProfession.LIBRARIAN, 1, factories -> {
-            factories.add(buyForEmeralds(UItems.GEMSTONE, 2, 1, 20, 1, 0.05F));
-            factories.add(buyForEmeralds(UItems.PEGASUS_FEATHER, 20, 5, 50, 3, 0.15F));
-            factories.add(buyForEmeralds(UItems.GRYPHON_FEATHER, 20, 3, 50, 2, 0.12F));
+//            factories.add(buyForEmeralds(UItems.GEMSTONE, 2, 1, 20, 1, 0.05F));
+//            factories.add(buyForEmeralds(UItems.PEGASUS_FEATHER, 20, 5, 50, 3, 0.15F));
+//            factories.add(buyForEmeralds(UItems.GRYPHON_FEATHER, 20, 3, 50, 2, 0.12F));
         });
         TradeOfferHelper.registerVillagerOffers(VillagerProfession.CARTOGRAPHER, 1, factories -> {
-            factories.add(buyForEmeralds(UItems.GEMSTONE, 3, 1, 20, 1, 0.05F));
+//            factories.add(buyForEmeralds(UItems.GEMSTONE, 3, 1, 20, 1, 0.05F));
         });
 
         TradeOfferHelper.registerWanderingTraderOffers(1, factories -> {
