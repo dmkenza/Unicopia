@@ -24,9 +24,7 @@ import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.TraitDiscovery;
 import com.minelittlepony.unicopia.advancement.UCriteria;
-import com.minelittlepony.unicopia.entity.PonyContainer;
-import com.minelittlepony.unicopia.entity.Living;
-import com.minelittlepony.unicopia.entity.Trap;
+import com.minelittlepony.unicopia.entity.*;
 import com.minelittlepony.unicopia.entity.effect.SunBlindnessStatusEffect;
 import com.minelittlepony.unicopia.entity.effect.UEffects;
 import com.minelittlepony.unicopia.item.UItems;
@@ -69,7 +67,7 @@ import net.minecraft.util.math.Direction;
 
 public class Pony extends Living<PlayerEntity> implements Transmittable, Copieable<Pony>, UpdateCallback {
 
-    private static final TrackedData<Integer> RACE = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<String> RACE = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.STRING);
 
     static final TrackedData<Float> ENERGY = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.FLOAT);
     static final TrackedData<Float> EXHAUSTION = DataTracker.registerData(PlayerEntity.class, TrackedDataHandlerRegistry.FLOAT);
@@ -121,13 +119,13 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
         this.levels = new PlayerLevelStore(this);
         this.tickers = Lists.newArrayList(gravity, mana, attributes, charms);
 
-        player.getDataTracker().startTracking(RACE, Race.HUMAN.ordinal());
+        player.getDataTracker().startTracking(RACE, Race.DEFAULT_ID);
     }
 
     public static void registerAttributes(DefaultAttributeContainer.Builder builder) {
-        builder.add(PlayerAttributes.EXTENDED_REACH_DISTANCE);
-        builder.add(PlayerAttributes.EXTRA_MINING_SPEED);
-        builder.add(PlayerAttributes.ENTITY_GRAVTY_MODIFIER);
+        builder.add(UEntityAttributes.EXTENDED_REACH_DISTANCE);
+        builder.add(UEntityAttributes.EXTRA_MINING_SPEED);
+        builder.add(UEntityAttributes.ENTITY_GRAVTY_MODIFIER);
     }
 
     public void setAnimation(Animation animation) {
@@ -171,7 +169,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
             return Race.HUMAN;
         }
 
-        return Race.fromId(getMaster().getDataTracker().get(RACE));
+        return Race.fromName(getMaster().getDataTracker().get(RACE), Race.HUMAN);
     }
 
     @Override
@@ -179,7 +177,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
         race = race.validate(entity);
         speciesSet = true;
         ticksInSun = 0;
-        entity.getDataTracker().set(RACE, race.ordinal());
+        entity.getDataTracker().set(RACE, Race.REGISTRY.getId(race).toString());
 
         gravity.updateFlightState();
         entity.sendAbilitiesUpdate();
@@ -248,11 +246,11 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
     }
 
     public float getExtendedReach() {
-        return (float)entity.getAttributeInstance(PlayerAttributes.EXTENDED_REACH_DISTANCE).getValue();
+        return (float)entity.getAttributeInstance(UEntityAttributes.EXTENDED_REACH_DISTANCE).getValue();
     }
 
     public float getBlockBreakingSpeed() {
-        return (float)entity.getAttributeInstance(PlayerAttributes.EXTRA_MINING_SPEED).getValue();
+        return (float)entity.getAttributeInstance(UEntityAttributes.EXTRA_MINING_SPEED).getValue();
     }
 
     public Motion getMotion() {
@@ -316,7 +314,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
     }
 
     public boolean isHanging() {
-        return entity.getAttributeInstance(PlayerAttributes.ENTITY_GRAVTY_MODIFIER).hasModifier(PlayerAttributes.BAT_HANGING);
+        return entity.getAttributeInstance(UEntityAttributes.ENTITY_GRAVTY_MODIFIER).hasModifier(PlayerAttributes.BAT_HANGING);
     }
 
     public boolean canHangAt(BlockPos pos) {
@@ -345,7 +343,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
                         || !canHangAt(getHangingPos())) {
 
 
-                    entity.getAttributes().getCustomInstance(PlayerAttributes.ENTITY_GRAVTY_MODIFIER).removeModifier(PlayerAttributes.BAT_HANGING);
+                    entity.getAttributes().getCustomInstance(UEntityAttributes.ENTITY_GRAVTY_MODIFIER).removeModifier(PlayerAttributes.BAT_HANGING);
                     entity.calculateDimensions();
                 }
             }
@@ -522,7 +520,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
     @Override
     public void toNBT(NbtCompound compound) {
         super.toNBT(compound);
-        compound.putString("playerSpecies", getSpecies().name());
+        compound.putString("playerSpecies", Race.REGISTRY.getId(getSpecies()).toString());
 
         compound.putFloat("magicExhaustion", magicExhaustion);
 
@@ -546,7 +544,7 @@ public class Pony extends Living<PlayerEntity> implements Transmittable, Copieab
     public void fromNBT(NbtCompound compound) {
         super.fromNBT(compound);
         speciesPersisted = true;
-        setSpecies(Race.fromName(compound.getString("playerSpecies")));
+        setSpecies(Race.fromName(compound.getString("playerSpecies"), Race.HUMAN));
 
         powers.fromNBT(compound.getCompound("powers"));
         gravity.fromNBT(compound.getCompound("gravity"));

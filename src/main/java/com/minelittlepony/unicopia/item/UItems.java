@@ -3,8 +3,7 @@ package com.minelittlepony.unicopia.item;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.minelittlepony.unicopia.Race;
-import com.minelittlepony.unicopia.USounds;
+import com.minelittlepony.unicopia.*;
 import com.minelittlepony.unicopia.block.UBlocks;
 import com.minelittlepony.unicopia.entity.UEntities;
 import com.minelittlepony.unicopia.item.enchantment.UEnchantments;
@@ -20,7 +19,6 @@ import net.minecraft.item.FoodComponents;
 import net.minecraft.item.MusicDiscItem;
 import net.minecraft.item.SpawnEggItem;
 import net.minecraft.sound.SoundEvent;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Rarity;
 import net.minecraft.util.registry.Registry;
 
@@ -37,10 +35,10 @@ public interface UItems {
     Item ROTTEN_APPLE = register("rotten_apple", new RottenAppleItem(new Item.Settings().group(ItemGroup.FOOD).food(FoodComponents.APPLE)));
     Item COOKED_ZAP_APPLE = register("cooked_zap_apple", new Item(new Item.Settings().group(ItemGroup.FOOD).food(FoodComponents.APPLE)));
 
-    Item MUSIC_DISC_CRUSADE = register("music_disc_crusade", USounds.RECORD_CRUSADE);
-    Item MUSIC_DISC_PET = register("music_disc_pet", USounds.RECORD_PET);
-    Item MUSIC_DISC_POPULAR = register("music_disc_popular", USounds.RECORD_POPULAR);
-    Item MUSIC_DISC_FUNK = register("music_disc_funk", USounds.RECORD_FUNK);
+    Item MUSIC_DISC_CRUSADE = register("music_disc_crusade", USounds.RECORD_CRUSADE, 181);
+    Item MUSIC_DISC_PET = register("music_disc_pet", USounds.RECORD_PET, 221);
+    Item MUSIC_DISC_POPULAR = register("music_disc_popular", USounds.RECORD_POPULAR, 112);
+    Item MUSIC_DISC_FUNK = register("music_disc_funk", USounds.RECORD_FUNK, 91);
 
     FriendshipBraceletItem FRIENDSHIP_BRACELET = register("friendship_bracelet", new FriendshipBraceletItem(
             new FabricItemSettings()
@@ -103,14 +101,14 @@ public interface UItems {
         if (item instanceof BlockItem) {
             ((BlockItem)item).appendBlocks(Item.BLOCK_ITEMS, item);
         }
-        return Registry.register(Registry.ITEM, new Identifier("unicopia", name), item);
+        return Registry.register(Registry.ITEM, Unicopia.id(name), item);
     }
 
-    static MusicDiscItem register(String name, SoundEvent sound) {
+    static MusicDiscItem register(String name, SoundEvent sound, int seconds) {
         return register(name, new MusicDiscItem(1, sound, new Settings()
                 .maxCount(1)
                 .group(ItemGroup.MISC)
-                .rarity(Rarity.RARE), 1
+                .rarity(Rarity.RARE), seconds
             ) {});
     }
 

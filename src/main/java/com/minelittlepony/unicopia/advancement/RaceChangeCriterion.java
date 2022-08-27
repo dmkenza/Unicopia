@@ -2,6 +2,7 @@ package com.minelittlepony.unicopia.advancement;
 
 import com.google.gson.JsonObject;
 import com.minelittlepony.unicopia.Race;
+import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.entity.player.Pony;
 
 import net.minecraft.advancement.criterion.AbstractCriterion;
@@ -16,7 +17,7 @@ import net.minecraft.util.JsonHelper;
 
 public class RaceChangeCriterion extends AbstractCriterion<RaceChangeCriterion.Conditions> {
 
-    private static final Identifier ID = new Identifier("unicopia", "player_change_race");
+    private static final Identifier ID = Unicopia.id("player_change_race");
 
     @Override
     public Identifier getId() {
@@ -25,7 +26,7 @@ public class RaceChangeCriterion extends AbstractCriterion<RaceChangeCriterion.C
 
     @Override
     protected Conditions conditionsFromJson(JsonObject json, Extended playerPredicate, AdvancementEntityPredicateDeserializer deserializer) {
-        return new Conditions(playerPredicate, Race.fromName(JsonHelper.getString(json, "race")));
+        return new Conditions(playerPredicate, Race.fromName(JsonHelper.getString(json, "race"), Race.EARTH));
     }
 
     public void trigger(PlayerEntity player) {
@@ -49,7 +50,7 @@ public class RaceChangeCriterion extends AbstractCriterion<RaceChangeCriterion.C
         @Override
         public JsonObject toJson(AdvancementEntityPredicateSerializer serializer) {
             JsonObject json = super.toJson(serializer);
-            json.addProperty("race", race.name().toLowerCase());
+            json.addProperty("race", Race.REGISTRY.getId(race).toString());
 
             return json;
         }
