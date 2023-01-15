@@ -19,14 +19,15 @@ public interface ToxicHolder {
     default void setFoodOverride(FoodComponent component) {}
 
     default Toxic getToxic(ItemStack stack) {
-        clearFoodOverride();
-        return Toxics.REGISTRY.stream()
-                .filter(i -> i.matches((Item)this))
-                .map(ToxicRegistryEntry::value)
-                .map(t -> {
-            t.component().ifPresent(this::setFoodOverride);
-            return t;
-        }).findFirst().orElseGet(this::getDefaultToxic);
+        return Toxic.EMPTY;
+//        clearFoodOverride();
+//        return Toxics.REGISTRY.stream()
+//                .filter(i -> i.matches((Item)this))
+//                .map(ToxicRegistryEntry::value)
+//                .map(t -> {
+//            t.component().ifPresent(this::setFoodOverride);
+//            return t;
+//        }).findFirst().orElseGet(this::getDefaultToxic);
     }
 
 }
