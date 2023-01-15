@@ -8,23 +8,26 @@ import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.EquinePredicates;
 import com.minelittlepony.unicopia.Owned;
+import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
+import com.minelittlepony.unicopia.block.data.ModificationType;
 import com.minelittlepony.unicopia.entity.Physics;
 import com.minelittlepony.unicopia.entity.PonyContainer;
 import com.minelittlepony.unicopia.particle.ParticleSource;
+import com.minelittlepony.unicopia.util.SoundEmitter;
 import com.minelittlepony.unicopia.util.VecHelper;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.World;
 
 /**
  * Interface for any magically capable entities that can cast or persist spells.
  */
-public interface Caster<E extends LivingEntity> extends Owned<E>, Levelled, Affine, ParticleSource {
+public interface Caster<E extends LivingEntity> extends Owned<E>, Levelled, Affine, ParticleSource, SoundEmitter {
 
     Physics getPhysics();
 
@@ -61,14 +64,24 @@ public interface Caster<E extends LivingEntity> extends Owned<E>, Levelled, Affi
     }
 
     default boolean canModifyAt(BlockPos pos) {
-        if (getMaster() instanceof PlayerEntity) {
-            return getReferenceWorld().canPlayerModifyAt((PlayerEntity)getMaster(), pos);
-        }
-        return getReferenceWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING);
+        return canModifyAt(pos, ModificationType.EITHER);
     }
 
-    default void playSound(SoundEvent sound, float volume, float pitch) {
-        getReferenceWorld().playSound(null, getEntity().getX(), getEntity().getY(), getEntity().getZ(), sound, getEntity().getSoundCategory(), volume, pitch);
+    default boolean canModifyAt(BlockPos pos, ModificationType mod) {
+
+        if (mod.checkPhysical()) {
+            if (getMaster() instanceof PlayerEntity player) {
+                if (!getReferenceWorld().canPlayerModifyAt(player, pos)) {
+                    return false;
+                }
+            } else {
+                if (!getReferenceWorld().getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+                    return false;
+                }
+            }
+        }
+
+        return !mod.checkMagical() || canCastAt(Vec3d.ofCenter(pos));
     }
 
     /**
@@ -92,6 +105,18 @@ public interface Caster<E extends LivingEntity> extends Owned<E>, Levelled, Affi
 
     default Stream<Entity> findAllEntitiesInRange(double radius) {
         return findAllEntitiesInRange(radius, null);
+    }
+
+    default boolean canCast() {
+        return canCastAt(getOriginVector());
+    }
+
+    default boolean canCastAt(Vec3d pos) {
+        return findAllSpellsInRange(500, SpellType.ARCANE_PROTECTION::isOn).noneMatch(caster -> caster
+                .getSpellSlot().get(SpellType.ARCANE_PROTECTION, false)
+                .filter(spell -> spell.blocksMagicFor(caster, this, pos))
+                .isPresent()
+        );
     }
 
     static Stream<Caster<?>> stream(Stream<Entity> entities) {

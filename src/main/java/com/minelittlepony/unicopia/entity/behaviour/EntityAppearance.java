@@ -14,8 +14,9 @@ import com.minelittlepony.unicopia.FlightType;
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.Owned;
 import com.minelittlepony.unicopia.ability.magic.Caster;
-import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
+import com.minelittlepony.unicopia.entity.ButterflyEntity;
 import com.minelittlepony.unicopia.entity.UEntityAttributes;
+import com.minelittlepony.unicopia.entity.collision.EntityCollisions;
 import com.minelittlepony.unicopia.entity.player.PlayerDimensions;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.projectile.ProjectileUtil;
@@ -39,17 +40,15 @@ import net.minecraft.entity.mob.FlyingEntity;
 import net.minecraft.entity.mob.ShulkerEntity;
 import net.minecraft.entity.mob.SpiderEntity;
 import net.minecraft.entity.mob.VexEntity;
+import net.minecraft.entity.passive.AllayEntity;
+import net.minecraft.entity.passive.BatEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ShulkerBulletEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.function.BooleanBiFunction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
+import net.minecraft.nbt.NbtElement;
 import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.WorldAccess;
 
-public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provider, FlightType.Provider {
+public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provider, FlightType.Provider, EntityCollisions.ComplexCollidable {
     private static final Optional<Float> BLOCK_HEIGHT = Optional.of(0.5F);
 
     @NotNull
@@ -137,6 +136,9 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         entity = InteractionManager.instance().createPlayer(source.getEntity(), profile);
         entity.setCustomName(source.getMaster().getName());
         ((PlayerEntity)entity).readNbt(nbt.getCompound("playerNbt"));
+        if (nbt.contains("playerVisibleParts", NbtElement.BYTE_TYPE)) {
+            entity.getDataTracker().set(Disguise.PlayerAccess.getModelBitFlag(), nbt.getByte("playerVisibleParts"));
+        }
         entity.setUuid(UUID.randomUUID());
         entity.extinguish();
 
@@ -195,8 +197,6 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
             return;
         }
 
-        Caster.of(entity).ifPresent(c -> c.getSpellSlot().clear());
-
         if (entity instanceof LivingEntity) {
             ((LivingEntity) entity).getAttributeInstance(UEntityAttributes.ENTITY_GRAVTY_MODIFIER).clearModifiers();
         }
@@ -227,6 +227,9 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
                 || entity instanceof AmbientEntity
                 || entity instanceof EnderDragonEntity
                 || entity instanceof VexEntity
+                || entity instanceof AllayEntity
+                || entity instanceof BatEntity
+                || entity instanceof ButterflyEntity
                 || entity instanceof ShulkerBulletEntity
                 || entity instanceof Flutterer
                 || ProjectileUtil.isFlyingProjectile(entity)) {
@@ -297,7 +300,7 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
         String newId = compound.getString("entityId");
 
         String newPlayerName = null;
-        if (compound.contains("entity") && compound.getCompound("entity").contains("playerName")) {
+        if (compound.contains("entity", NbtElement.COMPOUND_TYPE) && compound.getCompound("entity").contains("playerName", NbtElement.STRING_TYPE)) {
             newPlayerName = compound.getCompound("entity").getString("playerName");
         }
 
@@ -308,12 +311,10 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
             remove();
         }
 
-        if (compound.contains("entity")) {
+        if (compound.contains("entity", NbtElement.COMPOUND_TYPE)) {
             entityId = newId;
 
             entityNbt = compound.getCompound("entity");
-
-            compound.getString("entityData");
 
             if (entity != null) {
                 try {
@@ -337,64 +338,36 @@ public class EntityAppearance implements NbtSerialisable, PlayerDimensions.Provi
     private static NbtCompound encodeEntityToNBT(Entity entity) {
         NbtCompound entityNbt = new NbtCompound();
 
-        if (entity instanceof PlayerEntity) {
-            GameProfile profile = ((PlayerEntity)entity).getGameProfile();
+        if (entity instanceof PlayerEntity player) {
+            GameProfile profile = player.getGameProfile();
 
             entityNbt.putString("id", "player");
             if (profile.getId() != null) {
                 entityNbt.putUuid("playerId", profile.getId());
             }
             entityNbt.putString("playerName", profile.getName());
+            entityNbt.putByte("playerVisibleParts", player.getDataTracker().get(Disguise.PlayerAccess.getModelBitFlag()));
 
-            NbtCompound tag = new NbtCompound();
-
-            entity.writeNbt(tag);
-
-            entityNbt.put("playerNbt", tag);
-        } else {
-            entity.saveSelfNbt(entityNbt);
+            return NbtSerialisable.subTag("playerNbt", entityNbt, playerNbt -> {
+                player.writeNbt(playerNbt);
+                playerNbt.remove("unicopia_caster");
+                Pony pony = Pony.of(player);
+                if (pony != null) {
+                    NbtSerialisable.subTag("unicopia_caster", playerNbt, pony::toSyncronisedNbt);
+                }
+            });
         }
+
+        entity.saveSelfNbt(entityNbt);
+        entityNbt.remove("unicopia_caster");
 
         return entityNbt;
     }
 
-    void getCollissionShapes(ShapeContext context, Consumer<VoxelShape> output) {
-        getCollissionShapes(getAppearance(), context, output);
-        getAttachments().forEach(e -> getCollissionShapes(e, context, output));
+    @Override
+    public void getCollissionShapes(ShapeContext context, Consumer<VoxelShape> output) {
+        EntityCollisions.getCollissionShapes(getAppearance(), context, output);
+        getAttachments().forEach(e -> EntityCollisions.getCollissionShapes(e, context, output));
     }
 
-    private static void getCollissionShapes(@Nullable Entity entity, ShapeContext context, Consumer<VoxelShape> output) {
-        if (entity == null) {
-            return;
-        }
-
-        if (entity.isCollidable()) {
-            output.accept(VoxelShapes.cuboid(entity.getBoundingBox()));
-        } else if (entity instanceof FallingBlockEntity) {
-            BlockPos pos = entity.getBlockPos();
-            output.accept(((FallingBlockEntity) entity).getBlockState()
-                    .getCollisionShape(entity.world, entity.getBlockPos(), context)
-                    .offset(pos.getX(), pos.getY(), pos.getZ())
-            );
-        }
-    }
-
-    public static List<VoxelShape> getColissonShapes(@Nullable Entity entity, WorldAccess world, Box box) {
-        List<VoxelShape> shapes = new ArrayList<>();
-        ShapeContext ctx = entity == null ? ShapeContext.absent() : ShapeContext.of(entity);
-        VoxelShape entityShape = VoxelShapes.cuboid(box.expand(1.0E-6D));
-
-        world.getOtherEntities(entity, box.expand(0.5), e -> {
-            Caster.of(e).flatMap(c -> c.getSpellSlot().get(SpellPredicate.IS_DISGUISE, false)).ifPresent(p -> {
-                p.getDisguise().getCollissionShapes(ctx, shape -> {
-                    if (!shape.isEmpty() && VoxelShapes.matchesAnywhere(shape, entityShape, BooleanBiFunction.AND)) {
-                        shapes.add(shape);
-                    }
-                });
-            });
-            return false;
-        });
-
-        return shapes;
-    }
 }

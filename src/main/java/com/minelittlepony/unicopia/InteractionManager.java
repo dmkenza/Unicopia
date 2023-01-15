@@ -1,10 +1,13 @@
 package com.minelittlepony.unicopia;
 
+import java.util.Optional;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import com.minelittlepony.unicopia.ability.magic.CasterView;
+import com.minelittlepony.unicopia.block.data.Ether;
 import com.minelittlepony.unicopia.entity.player.dummy.DummyPlayerEntity;
-import com.minelittlepony.unicopia.entity.player.dummy.DummyServerPlayerEntity;
 import com.minelittlepony.unicopia.network.handler.ClientNetworkHandler;
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
@@ -12,6 +15,7 @@ import com.mojang.authlib.minecraft.MinecraftSessionService;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.world.BlockView;
 import net.minecraft.world.World;
 
 public class InteractionManager {
@@ -21,6 +25,7 @@ public class InteractionManager {
     public static final int SOUND_MINECART = 3;
     public static final int SOUND_GLIDING = 4;
     public static final int SOUND_MAGIC_BEAM = 5;
+    public static final int SOUND_HEART_BEAT = 6;
 
     public static final int SCREEN_DISPELL_ABILITY = 0;
 
@@ -28,6 +33,13 @@ public class InteractionManager {
 
     public static InteractionManager instance() {
         return INSTANCE;
+    }
+
+    public Optional<CasterView> getCasterView(BlockView view) {
+        if (view instanceof ServerWorld world) {
+            return Optional.of(Ether.get(world));
+        }
+        return Optional.empty();
     }
 
     public MinecraftSessionService getSessionService(World world) {
@@ -76,7 +88,7 @@ public class InteractionManager {
      * Returns an implementation of PlayerEntity appropriate to the side being called on.
      */
     @NotNull
-    public PlayerEntity createPlayer(Entity observer, GameProfile profile) {
+    public final PlayerEntity createPlayer(Entity observer, GameProfile profile) {
         return createPlayer(observer.world, profile);
     }
 
@@ -87,9 +99,6 @@ public class InteractionManager {
      */
     @NotNull
     public PlayerEntity createPlayer(World world, GameProfile profile) {
-        if (world instanceof ServerWorld) {
-            return new DummyServerPlayerEntity((ServerWorld)world, profile);
-        }
         return new DummyPlayerEntity(world, profile);
     }
 }

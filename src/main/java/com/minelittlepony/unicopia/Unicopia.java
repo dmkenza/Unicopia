@@ -17,8 +17,11 @@ import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.TraitLoader;
 import com.minelittlepony.unicopia.advancement.UCriteria;
 import com.minelittlepony.unicopia.block.UBlocks;
-import com.minelittlepony.unicopia.block.state.StateMaps;
+import com.minelittlepony.unicopia.block.UTreeGen;
+import com.minelittlepony.unicopia.block.data.*;
+import com.minelittlepony.unicopia.block.state.StateMapLoader;
 import com.minelittlepony.unicopia.command.Commands;
+import com.minelittlepony.unicopia.container.SpellbookChapterLoader;
 import com.minelittlepony.unicopia.container.UScreenHandlers;
 import com.minelittlepony.unicopia.entity.UEntities;
 import com.minelittlepony.unicopia.entity.effect.UPotions;
@@ -39,16 +42,13 @@ public class Unicopia implements ModInitializer {
     public static Config getConfig() {
         if (CONFIG == null) {
             CONFIG = new Config();
+            CONFIG.load();
         }
         return CONFIG;
     }
 
     public static Identifier id(String name) {
         return new Identifier(DEFAULT_NAMESPACE, name);
-    }
-
-    public Unicopia() {
-        getConfig();
     }
 
     @Override
@@ -61,11 +61,19 @@ public class Unicopia implements ModInitializer {
 
         ServerTickEvents.END_WORLD_TICK.register(w -> {
             ((BlockDestructionManager.Source)w).getDestructionManager().tick();
+            ZapAppleStageStore.get(w).tick();
+            WeatherConditions.get(w).tick();
+            if (Debug.DEBUG_SPELLBOOK_CHAPTERS) {
+                SpellbookChapterLoader.INSTANCE.sendUpdate(w.getServer());
+            }
         });
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(TreeTypeLoader.INSTANCE);
         ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(UEnchantments.POISONED_JOKE);
-        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(TraitLoader.INSTANCE);
+        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(new TraitLoader());
+        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(StateMapLoader.INSTANCE);
+        ResourceManagerHelper.get(ResourceType.SERVER_DATA).registerReloadListener(SpellbookChapterLoader.INSTANCE);
 
+        UGameEvents.bootstrap();
         UBlocks.bootstrap();
         UItems.bootstrap();
         UPotions.bootstrap();
@@ -74,8 +82,8 @@ public class Unicopia implements ModInitializer {
         Race.bootstrap();
         SpellType.bootstrap();
         Abilities.bootstrap();
-        StateMaps.bootstrap();
         UScreenHandlers.bootstrap();
+        UTreeGen.bootstrap();
     }
 
     public interface SidedAccess {

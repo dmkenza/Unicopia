@@ -1,20 +1,14 @@
 package com.minelittlepony.unicopia.item;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Consumer;
+import java.util.*;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.minelittlepony.unicopia.Affinity;
-import com.minelittlepony.unicopia.AwaitTickQueue;
+import com.google.common.collect.ImmutableMultimap;
+import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.USounds;
-import com.minelittlepony.unicopia.entity.IItemEntity;
-import com.minelittlepony.unicopia.entity.ItemImpl;
-import com.minelittlepony.unicopia.entity.effect.UEffects;
-import com.minelittlepony.unicopia.entity.player.MagicReserves;
-import com.minelittlepony.unicopia.entity.player.PlayerCharmTracker;
-import com.minelittlepony.unicopia.entity.player.Pony;
+import com.minelittlepony.unicopia.entity.*;
+import com.minelittlepony.unicopia.entity.player.*;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
 
 import net.fabricmc.api.EnvType;
@@ -22,44 +16,35 @@ import net.fabricmc.api.Environment;
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.Entity;
+import net.minecraft.entity.*;
 import net.minecraft.entity.Entity.RemovalReason;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.attribute.EntityAttributes;
+import net.minecraft.entity.attribute.*;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.StringHelper;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.*;
+import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.LocalDifficulty;
 import net.minecraft.world.World;
-import net.minecraft.world.explosion.Explosion.DestructionType;
 
-public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.Charm, ItemImpl.ClingyItem, ItemImpl.GroundTickCallback {
+public class AlicornAmuletItem extends AmuletItem implements ItemTracker.Trackable, ItemImpl.ClingyItem, ItemImpl.GroundTickCallback {
+    private static final UUID EFFECT_UUID = UUID.fromString("c0a870f5-99ef-4716-a23e-f320ee834b26");
+    private static final Map<EntityAttribute, Float> EFFECT_SCALES = Map.of(
+            EntityAttributes.GENERIC_ATTACK_DAMAGE, 0.2F,
+            EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 0.05F,
+            EntityAttributes.GENERIC_ATTACK_SPEED, 0.2F,
+            EntityAttributes.GENERIC_ARMOR_TOUGHNESS, 0.001F,
+            EntityAttributes.GENERIC_ARMOR, 0.01F
+    );
 
     public AlicornAmuletItem(FabricItemSettings settings) {
-        super(settings, 0, new AmuletItem.ModifiersBuilder()
-                .add(EntityAttributes.GENERIC_ARMOR, 9000)
-                .add(EntityAttributes.GENERIC_ARMOR_TOUGHNESS, 9000)
-                .add(EntityAttributes.GENERIC_KNOCKBACK_RESISTANCE, 9000)
-                .add(EntityAttributes.GENERIC_ATTACK_DAMAGE, 100)
-                .add(EntityAttributes.GENERIC_ATTACK_KNOCKBACK, 20)
-            .build());
-    }
-
-    @Override
-    public Affinity getAffinity() {
-        return Affinity.BAD;
+        super(settings, 0, ImmutableMultimap.of());
     }
 
     @Environment(EnvType.CLIENT)
@@ -68,9 +53,9 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
         Pony iplayer = Pony.of(MinecraftClient.getInstance().player);
 
         if (iplayer != null) {
-            int attachedTime = iplayer.getCharms().getArmour().getTicks(this);
-            if (attachedTime > 0) {
-                tooltip.add(Text.translatable(getTranslationKey() + ".lore", StringHelper.formatTicks(attachedTime)));
+            long ticks = iplayer.getArmour().getTicks(this);
+            if (ticks > 0) {
+                tooltip.add(Text.literal(ItemTracker.formatTicks(ticks).formatted(Formatting.GRAY)));
             }
         }
     }
@@ -83,6 +68,11 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
     @Override
     public boolean isClingy(ItemStack stack) {
         return true;
+    }
+
+    @Override
+    public boolean damage(DamageSource source) {
+        return source.isOutOfWorld();
     }
 
     @Override
@@ -99,7 +89,7 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
     public void interactWithPlayer(IItemEntity item, PlayerEntity player) {
         ItemEntity entity = (ItemEntity)item;
 
-        if (!player.world.isClient && !entity.isRemoved()) {
+        if (!player.world.isClient && !entity.isRemoved() && !player.isCreative()) {
             if (player.getPos().distanceTo(entity.getPos()) < 0.5) {
                if (entity.world.random.nextInt(150) == 0) {
                    entity.setPickupDelay(0);
@@ -119,91 +109,135 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
     }
 
     @Override
-    public void onRemoved(Pony pony, int timeWorn) {
+    public void onEquipped(Living<?> wearer) {
+        wearer.getReferenceWorld().playSound(null, wearer.getOrigin(), USounds.ITEM_ALICORN_AMULET_CURSE, wearer.getEntity().getSoundCategory(), 3, 1);
+    }
+
+    @Override
+    public void onUnequipped(Living<?> wearer, long timeWorn) {
+
+        if (wearer.getMaster() instanceof PlayerEntity player && player.isCreative()) {
+            return;
+        }
+
         float attachedTime = timeWorn / 100F;
 
-        LocalDifficulty difficulty = pony.getReferenceWorld().getLocalDifficulty(pony.getOrigin());
+        LocalDifficulty difficulty = wearer.getReferenceWorld().getLocalDifficulty(wearer.getOrigin());
         float amount = attachedTime * (1 + difficulty.getClampedLocalDifficulty());
 
-        amount = Math.min(amount, pony.getMaster().getMaxHealth());
+        amount = Math.min(amount, wearer.getMaster().getMaxHealth());
 
-        pony.getMaster().getHungerManager().setFoodLevel(1);
-        pony.getMaster().damage(MagicalDamageSource.ALICORN_AMULET, amount);
-        pony.getMaster().addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 1));
+        if (wearer.getMaster() instanceof PlayerEntity) {
+            ((PlayerEntity)wearer.getMaster()).getHungerManager().setFoodLevel(1);
+        }
+        wearer.getMaster().damage(MagicalDamageSource.ALICORN_AMULET, amount);
+        wearer.getMaster().addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, 200, 1));
+        if (timeWorn > ItemTracker.HOURS) {
+            wearer.getMaster().addStatusEffect(new StatusEffectInstance(StatusEffects.WEAKNESS, 200, 3));
+        }
 
         if (attachedTime > 120) {
-            pony.getMaster().takeKnockback(1, 1, 1);
+            wearer.getMaster().takeKnockback(1, 1, 1);
+            wearer.updateVelocity();
         }
+
+        EFFECT_SCALES.keySet().forEach(attribute -> {
+            EntityAttributeInstance instance = wearer.getMaster().getAttributeInstance(attribute);
+            @Nullable
+            EntityAttributeModifier modifier = instance.getModifier(EFFECT_UUID);
+            if (modifier != null) {
+                instance.removeModifier(modifier);
+            }
+        });
     }
 
     @Override
     public void inventoryTick(ItemStack stack, World world, Entity entity, int slot, boolean selected) {
 
-        if (!(entity instanceof PlayerEntity)) {
-            return;
-        }
         if (world.isClient) {
             return;
         }
 
-        PlayerEntity player = (PlayerEntity)entity;
-
-        if (selected && !isApplicable(player) && world.random.nextInt(320) == 0) {
+        // if we're in the main hand, try to equip ourselves
+        if (entity instanceof PlayerEntity player && selected && !isApplicable(player) && world.random.nextInt(320) == 0) {
             use(world, player, Hand.MAIN_HAND);
             return;
         }
 
-        Pony pony = Pony.of(player);
+        Living<?> living = Living.living(entity);
 
-        if (!pony.getCharms().getArmour().contains(this)) {
+        if (living == null || !living.getArmour().contains(this)) {
             return;
         }
 
-        float attachedTime = pony.getCharms().getArmour().getTicks(this);
+        long attachedTicks = living.getArmour().getTicks(this);
+        boolean poweringUp = attachedTicks < (ItemTracker.DAYS * 4);
+        boolean fullSecond = attachedTicks % ItemTracker.SECONDS == 0;
 
-        MagicReserves reserves = pony.getMagicalReserves();
+        if (entity instanceof PlayerEntity player) {
+            // healing effect
+            if (poweringUp) {
+                if (player.getHealth() < player.getMaxHealth()) {
+                    player.heal(0.5F);
+                } else if (player.canConsume(false)) {
+                    player.getHungerManager().add(1, 0);
+                }
+            }
 
-        if (player.getHealth() < player.getMaxHealth()) {
-            player.heal(0.5F);
-        } else if (player.canConsume(false)) {
-            player.getHungerManager().add(1, 0);
-        } else {
-            player.removeStatusEffect(StatusEffects.NAUSEA);
+            Pony pony = (Pony)living;
+
+            MagicReserves reserves = pony.getMagicalReserves();
+
+            // constantly increase exertion
+            if (reserves.getExertion().get() < reserves.getExertion().getMax()) {
+                reserves.getExertion().add(2);
+            }
+
+            if (fullSecond && world.random.nextInt(12) == 0 && !pony.getMaster().isCreative()) {
+                reserves.getEnergy().add(reserves.getEnergy().getMax() / 10F);
+                pony.getCorruption().add((int)MathHelper.clamp(attachedTicks / ItemTracker.HOURS, 1, pony.getCorruption().getMax()));
+            }
+
+            if (attachedTicks % ItemTracker.HOURS < 90 && world.random.nextInt(900) == 0) {
+                player.world.playSound(null, player.getBlockPos(), USounds.ITEM_ALICORN_AMULET_HALLUCINATION, SoundCategory.AMBIENT, 3, 1);
+            } else if (attachedTicks < 2 || (attachedTicks % (10 * ItemTracker.SECONDS) < 9 && world.random.nextInt(90) == 0)) {
+                if (attachedTicks % 5 == 0) {
+                    InteractionManager.INSTANCE.playLoopingSound(player, InteractionManager.SOUND_HEART_BEAT, 0);
+                }
+
+                reserves.getExertion().add(reserves.getExertion().getMax());
+                reserves.getEnergy().add(reserves.getEnergy().getMax() / 2F);
+                living.getMaster().removeStatusEffect(StatusEffects.WEAKNESS);
+                living.getMaster().removeStatusEffect(StatusEffects.NAUSEA);
+            }
+
+            if (!poweringUp) {
+                if (attachedTicks % 100 == 0) {
+                    player.getHungerManager().addExhaustion(90F);
+                    float healthDrop = MathHelper.clamp(player.getMaxHealth() - player.getHealth(), 2, 5);
+                    player.damage(MagicalDamageSource.ALICORN_AMULET, healthDrop);
+                }
+
+                return;
+            }
         }
 
-        if (reserves.getExertion().get() < reserves.getExertion().getMax()) {
-            reserves.getExertion().add(2);
+        // every 1 second, update modifiers
+        if (fullSecond) {
+            EFFECT_SCALES.entrySet().forEach(attribute -> {
+                float seconds = (float)attachedTicks / ItemTracker.SECONDS;
+                EntityAttributeInstance instance = living.getMaster().getAttributeInstance(attribute.getKey());
+                @Nullable
+                EntityAttributeModifier modifier = instance.getModifier(EFFECT_UUID);
+                float desiredValue = attribute.getValue() * seconds;
+                if (!MathHelper.approximatelyEquals(desiredValue, modifier == null ? 0 : modifier.getValue())) {
+                    if (modifier != null) {
+                        instance.removeModifier(modifier);
+                    }
+                    instance.addTemporaryModifier(new EntityAttributeModifier(EFFECT_UUID, "Alicorn Amulet Modifier", attribute.getValue() * seconds, EntityAttributeModifier.Operation.ADDITION));
+                }
+            });
         }
-
-        if (reserves.getEnergy().get() < 0.005F + (attachedTime / 1000000)) {
-            reserves.getEnergy().add(2);
-        }
-
-        if (attachedTime == 1) {
-            world.playSound(null, player.getBlockPos(), USounds.ITEM_ALICORN_AMULET_CURSE, SoundCategory.PLAYERS, 3, 1);
-        }
-
-        // attempt to play 3 tricks every tick
-        Trick.ALL.stream().filter(trick -> trick.play(attachedTime, player)).limit(3).toList();
-
-        if (stack.getDamage() >= getMaxDamage() - 1) {
-            stack.damage(10, player, p -> p.sendEquipmentBreakStatus(EquipmentSlot.CHEST));
-
-            player.damage(MagicalDamageSource.ALICORN_AMULET, player.getMaxHealth() - 0.01F);
-            player.getHungerManager().setFoodLevel(1);
-
-            Vec3d pos = player.getPos();
-
-            player.world.createExplosion(player, pos.x, pos.y, pos.z, 10, DestructionType.NONE);
-
-            AwaitTickQueue.scheduleTask(player.world, w -> {
-                w.createExplosion(player, pos.x, pos.y, pos.z, 6, DestructionType.BREAK);
-            }, 50);
-        }
-
-        pony.findAllEntitiesInRange(10, e -> e instanceof MobEntity && !((MobEntity)e).hasStatusEffect(UEffects.CORRUPT_INFLUENCE)).forEach(e -> {
-            ((MobEntity)e).addStatusEffect(new StatusEffectInstance(UEffects.CORRUPT_INFLUENCE, 1300, 1));
-        });
     }
 
     @Override
@@ -215,49 +249,5 @@ public class AlicornAmuletItem extends AmuletItem implements PlayerCharmTracker.
         }
 
         return ActionResult.PASS;
-    }
-
-    public static class Trick {
-        private static final List<Trick> ALL = new ArrayList<>();
-
-        public static final Trick SPOOK = new Trick(0, 1050, player -> player.world.playSound(null, player.getBlockPos(), USounds.ITEM_ALICORN_AMULET_HALLUCINATION, SoundCategory.PLAYERS, 3, 1));
-        public static final Trick WITHER = new Trick(20000, 100, player -> {
-            StatusEffectInstance effect = new StatusEffectInstance(player.world.random.nextInt(32000) == 0 ? StatusEffects.WITHER : StatusEffects.HUNGER, 300, 3);
-            effect.setPermanent(true);
-            player.addStatusEffect(effect);
-        });
-        public static final Trick POKE = new Trick(13000, 300, player -> player.damage(MagicalDamageSource.ALICORN_AMULET, 1F));
-        public static final Trick SPIN = new Trick(6000, 300, player -> player.setYaw(player.getYaw() + 180));
-        public static final Trick BUTTER_FINGERS = new Trick(1000, 300, player -> player.getInventory().dropSelectedItem(false));
-        public static final Trick MOVE = new Trick(3000, 300, player -> {
-            float amount = player.world.random.nextFloat() - 0.5F;
-            boolean sideways = player.world.random.nextBoolean();
-            player.addVelocity(sideways ? 0 : amount, 0, sideways ? amount : 0);
-        });
-        public static final Trick SWING = new Trick(2000, 100, player -> player.swingHand(Hand.MAIN_HAND));
-        public static final Trick BAD_JOO_JOO = new Trick(1000, 10, player -> {
-            if (!player.hasStatusEffect(StatusEffects.BAD_OMEN)) {
-                player.addStatusEffect(new StatusEffectInstance(StatusEffects.BAD_OMEN, 300, 3));
-            }
-        });
-
-        private final int minTime;
-        private final int chance;
-        private final Consumer<PlayerEntity> action;
-
-        public Trick(int minTime, int chance, Consumer<PlayerEntity> action) {
-            this.minTime = minTime;
-            this.chance = chance;
-            this.action = action;
-            ALL.add(this);
-        }
-
-        public boolean play(float ticks, PlayerEntity player) {
-            if (ticks > minTime && (chance <= 0 || player.world.random.nextInt(chance) == 0)) {
-                action.accept(player);
-                return true;
-            }
-            return false;
-        }
     }
 }

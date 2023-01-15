@@ -10,41 +10,6 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 
 public interface SpellContainer {
-    SpellContainer EMPTY = new SpellContainer() {
-        @Override
-        public <T extends Spell> Optional<T> get(SpellPredicate<T> type, boolean update) {
-            return Optional.empty();
-        }
-
-        @Override
-        public void put(Spell effect) { }
-
-        @Override
-        public boolean clear() {
-            return false;
-        }
-
-        @Override
-        public boolean removeIf(Predicate<Spell> effect, boolean update) {
-            return false;
-        }
-
-        @Override
-        public boolean forEach(Function<Spell, Operation> action, boolean update) {
-            return false;
-        }
-
-        @Override
-        public boolean contains(UUID id) {
-            return false;
-        }
-
-        @Override
-        public Stream<Spell> stream(boolean update) {
-            return Stream.empty();
-        }
-    };
-
     /**
      * Checks if a spell with the given uuid is present.
      */
@@ -75,11 +40,20 @@ public interface SpellContainer {
     void put(@Nullable Spell effect);
 
     /**
-     * Removes all matching active effects.
+     * Removes all active effects that match or contain a matching effect.
      *
      * @return True if the collection was changed
      */
-    boolean removeIf(Predicate<Spell> test, boolean update);
+    default boolean removeIf(Predicate<Spell> test, boolean update) {
+        return removeWhere(spell -> spell.findMatches(test).findFirst().isPresent(), update);
+    }
+
+    /**
+     * Removes all matching top level active effects.
+     *
+     * @return True if the collection was changed
+     */
+    boolean removeWhere(Predicate<Spell> test, boolean update);
 
     /**
      * Iterates active spells and optionally removes matching ones.
@@ -88,57 +62,21 @@ public interface SpellContainer {
      */
     boolean forEach(Function<Spell, Operation> action, boolean update);
 
+
+    /**
+     * Gets all active effects for this caster updating it if needed.
+     */
     Stream<Spell> stream(boolean update);
+
+    /**
+     * Gets all active effects for this caster that match the given type updating it if needed.
+     */
+    <T extends Spell> Stream<T> stream(@Nullable SpellPredicate<T> type, boolean update);
 
     /**
      * Removes all effects currently active in this slot.
      */
     boolean clear();
-
-    interface Delegate extends SpellContainer {
-
-        SpellContainer delegate();
-
-        @Override
-        default boolean contains(UUID id) {
-            return delegate().contains(id);
-        }
-
-        @Override
-        default boolean contains(@Nullable SpellPredicate<?> type) {
-            return delegate().contains(type);
-        }
-
-        @Override
-        default <T extends Spell> Optional<T> get(@Nullable SpellPredicate<T> type, boolean update) {
-            return delegate().get(type, update);
-        }
-
-        @Override
-        default void put(@Nullable Spell effect) {
-            delegate().put(effect);
-        }
-
-        @Override
-        default boolean removeIf(Predicate<Spell> effect, boolean update) {
-            return delegate().removeIf(effect, update);
-        }
-
-        @Override
-        default boolean forEach(Function<Spell, Operation> action, boolean update) {
-            return delegate().forEach(action, update);
-        }
-
-        @Override
-        default boolean clear() {
-            return delegate().clear();
-        }
-
-        @Override
-        default Stream<Spell> stream(boolean update) {
-            return delegate().stream(update);
-        }
-    }
 
     public enum Operation {
         SKIP,

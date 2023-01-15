@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -83,6 +84,16 @@ public class TraitDiscovery implements NbtSerialisable {
         return items.getOrDefault(Registry.ITEM.getId(item), SpellTraits.EMPTY);
     }
 
+    public Stream<Item> getKnownItems(Trait trait) {
+        return items.entrySet().stream()
+                .filter(entry -> entry.getValue().get(trait) > 0)
+                .flatMap(entry -> Registry.ITEM.getOrEmpty(entry.getKey()).stream());
+    }
+
+    public boolean isUnread() {
+        return !unreadTraits.isEmpty();
+    }
+
     public boolean isUnread(Trait trait) {
         return unreadTraits.contains(trait);
     }
@@ -94,7 +105,6 @@ public class TraitDiscovery implements NbtSerialisable {
     @Environment(EnvType.CLIENT)
     public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip) {
         SpellTraits.getEmbeddedTraits(stack)
-            .flatMap(embedded -> SpellTraits.fromEntries(embedded.entries().stream().filter(e -> isKnown(e.getKey()))))
             .orElseGet(() -> getKnownTraits(stack.getItem()))
             .appendTooltip(tooltip);
     }

@@ -8,21 +8,22 @@ import java.util.HashSet;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Supplier;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.world.World;
 
 public interface TreeType {
     TreeType NONE = new TreeTypeImpl(
             Unicopia.id("none"),
             false,
-            new Weighted<Supplier<ItemStack>>(),
             Set.of(),
-            Set.of()
+            Set.of(),
+            Weighted.of(),
+            0
     );
     Direction[] WIDE_DIRS = new Direction[] { Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
 
@@ -148,7 +149,7 @@ public interface TreeType {
             pos = pos.up();
         }
 
-        return of(w.getBlockState(pos));
+        return of(w.getBlockState(pos.up()));
     }
 
     boolean isLeaves(BlockState state);
@@ -159,16 +160,16 @@ public interface TreeType {
         return isLeaves(state) || isLog(state);
     }
 
-    ItemStack pickRandomStack(BlockState state);
+    ItemStack pickRandomStack(Random random, BlockState state);
 
     boolean isWide();
 
     static TreeType at(BlockPos pos, World world) {
-        return TreeTypeLoader.INSTANCE.get(world.getBlockState(pos), pos, world);
+        return TreeTypes.get(world.getBlockState(pos), pos, world);
     }
 
     static TreeType of(BlockState state) {
-        return TreeTypeLoader.INSTANCE.get(state);
+        return TreeTypes.get(state);
     }
 
     static TreeType of(TreeType logs, TreeType leaves) {
@@ -187,8 +188,8 @@ public interface TreeType {
             }
 
             @Override
-            public ItemStack pickRandomStack(BlockState state) {
-                return (isLeaves(state) ? leaves : logs).pickRandomStack(state);
+            public ItemStack pickRandomStack(Random random, BlockState state) {
+                return (isLeaves(state) ? leaves : logs).pickRandomStack(random, state);
             }
 
             @Override

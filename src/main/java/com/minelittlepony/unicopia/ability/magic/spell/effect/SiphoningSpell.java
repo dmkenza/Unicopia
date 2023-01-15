@@ -9,7 +9,6 @@ import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.AbstractAreaEffectSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.FollowingParticleEffect;
@@ -35,8 +34,8 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
 
     private int ticksUpset;
 
-    protected SiphoningSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    protected SiphoningSpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     @Override
@@ -52,7 +51,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
         }
 
         if (source.isClient()) {
-            int radius = 4 + source.getLevel().get();
+            float radius = 4 + source.getLevel().getScaled(5);
             int direction = isFriendlyTogether(source) ? 1 : -1;
 
             source.spawnParticles(new Sphere(true, radius, 1, 0, 1), 1, pos -> {
@@ -79,7 +78,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
     }
 
     private Stream<LivingEntity> getTargets(Caster<?> source) {
-        return VecHelper.findInRange(null, source.getReferenceWorld(), source.getOriginVector(), 4 + source.getLevel().get(), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.and(e -> e instanceof LivingEntity))
+        return VecHelper.findInRange(null, source.getReferenceWorld(), source.getOriginVector(), 4 + source.getLevel().getScaled(6), EntityPredicates.EXCEPT_CREATIVE_OR_SPECTATOR.and(e -> e instanceof LivingEntity))
                 .stream()
                 .map(e -> (LivingEntity)e);
     }
@@ -101,7 +100,7 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
                     setDirty();
                 }
             } else {
-                e.heal((float)Math.min(0.5F * (1 + source.getLevel().get()), maxHealthGain * 0.6));
+                e.heal((float)Math.min(source.getLevel().getScaled(e.getHealth()) / 2F, maxHealthGain * 0.6));
                 ParticleUtils.spawnParticle(e.world, new FollowingParticleEffect(UParticles.HEALTH_DRAIN, e, 0.2F), e.getPos(), Vec3d.ZERO);
             }
         });
@@ -152,7 +151,6 @@ public class SiphoningSpell extends AbstractAreaEffectSpell {
 
         owner.heal(healthGain);
     }
-
 
     @Override
     public void toNBT(NbtCompound compound) {

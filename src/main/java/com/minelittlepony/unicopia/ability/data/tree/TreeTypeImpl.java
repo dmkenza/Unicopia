@@ -1,7 +1,6 @@
 package com.minelittlepony.unicopia.ability.data.tree;
 
-import com.minelittlepony.unicopia.util.Weighted;
-
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -9,23 +8,17 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.LeavesBlock;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import net.minecraft.util.registry.Registry;
 
-public final class TreeTypeImpl implements TreeType {
-    private final Identifier name;
-    private final boolean wideTrunk;
-    private final Set<Identifier> logs;
-    private final Set<Identifier> leaves;
-    private final Weighted<Supplier<ItemStack>> pool;
-
-    TreeTypeImpl(Identifier name, boolean wideTrunk, Weighted<Supplier<ItemStack>> pool, Set<Identifier> logs, Set<Identifier> leaves) {
-        this.name = name;
-        this.wideTrunk = wideTrunk;
-        this.pool = pool;
-        this.logs = logs;
-        this.leaves = leaves;
-    }
-
+public record TreeTypeImpl (
+        Identifier name,
+        boolean wideTrunk,
+        Set<Identifier> logs,
+        Set<Identifier> leaves,
+        Supplier<Optional<Supplier<ItemStack>>> pool,
+        int rarity
+) implements TreeType {
     @Override
     public boolean isLeaves(BlockState state) {
         return findMatch(leaves, state) && isNonPersistent(state);
@@ -42,22 +35,15 @@ public final class TreeTypeImpl implements TreeType {
     }
 
     @Override
-    public ItemStack pickRandomStack(BlockState state) {
-        return pool.get().map(Supplier::get).orElse(ItemStack.EMPTY);
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        return o instanceof TreeTypeImpl && name.compareTo(((TreeTypeImpl)o).name) == 0;
+    public ItemStack pickRandomStack(Random random, BlockState state) {
+        if (rarity <= 0 || random.nextInt(rarity) == 0) {
+            return pool.get().map(Supplier::get).orElse(ItemStack.EMPTY);
+        }
+        return ItemStack.EMPTY;
     }
 
     private static boolean findMatch(Set<Identifier> ids, BlockState state) {
         return ids.contains(Registry.BLOCK.getId(state.getBlock()));
-    }
-
-    @Override
-    public int hashCode() {
-        return name.hashCode();
     }
 
     static boolean isNonPersistent(BlockState state) {

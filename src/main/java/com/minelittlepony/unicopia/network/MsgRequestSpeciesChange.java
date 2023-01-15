@@ -45,10 +45,14 @@ public class MsgRequestSpeciesChange implements Packet<ServerPlayerEntity> {
 
         Race worldDefaultRace = WorldTribeManager.forWorld((ServerWorld)player.getReferenceWorld()).getDefaultRace();
 
-        if (force || player.getSpecies().isDefault() || (player.getSpecies() == worldDefaultRace && !player.isSpeciesPersisted())) {
+        if (force || player.getActualSpecies().isDefault() || (player.getActualSpecies() == worldDefaultRace && !player.isSpeciesPersisted())) {
             player.setSpecies(newRace.isPermitted(sender) ? newRace : worldDefaultRace);
+
+            if (force) {
+                player.onSpawn();
+            }
         }
 
-        Channel.SERVER_PLAYER_CAPABILITIES.send(sender, new MsgPlayerCapabilities(true, player));
+        Channel.SERVER_PLAYER_CAPABILITIES.send(sender, new MsgPlayerCapabilities(player));
     }
 }

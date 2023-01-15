@@ -2,27 +2,24 @@ package com.minelittlepony.unicopia.util;
 
 import java.util.stream.Stream;
 
-import com.google.common.collect.AbstractIterator;
-
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 
 public interface InventoryUtil {
-    static Iterable<ItemStack> iterate(Inventory inventory) {
-        return () -> new AbstractIterator<>() {
-            private int slot = 0;
-
-            @Override
-            protected ItemStack computeNext() {
-                if (slot >= inventory.size()) {
-                    return endOfData();
-                }
-                return inventory.getStack(slot++);
-            }
-        };
+    static Stream<ItemStack> stream(Inventory inventory) {
+        return slots(inventory).map(inventory::getStack);
     }
 
     static Stream<Integer> slots(Inventory inventory) {
         return Stream.iterate(0, i -> i < inventory.size(), i -> i + 1);
+    }
+
+    static int getOpenSlot(Inventory inventory) {
+        for (int i = 0; i < inventory.size(); i++) {
+            if (inventory.getStack(i).isEmpty()) {
+                return i;
+            }
+        }
+        return -1;
     }
 }

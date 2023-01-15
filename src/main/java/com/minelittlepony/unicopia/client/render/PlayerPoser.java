@@ -3,14 +3,18 @@ package com.minelittlepony.unicopia.client.render;
 import java.util.Optional;
 
 import com.minelittlepony.unicopia.USounds;
-import com.minelittlepony.unicopia.client.minelittlepony.MineLPConnector;
+import com.minelittlepony.unicopia.client.minelittlepony.MineLPDelegate;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import com.minelittlepony.unicopia.item.GlassesItem;
 import com.minelittlepony.unicopia.util.AnimationUtil;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.model.ModelPart;
 import net.minecraft.client.render.entity.model.BipedEntityModel;
+import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.ItemStack;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Arm;
 import net.minecraft.util.math.MathHelper;
@@ -19,11 +23,41 @@ import net.minecraft.util.math.Vec3f;
 public class PlayerPoser {
     public static final PlayerPoser INSTANCE = new PlayerPoser();
 
-    public void applyPosing(MatrixStack matrices, PlayerEntity player, BipedEntityModel<?> model) {
+    private static final float HEAD_NOD_DURATION = 15F;
+    private static final float HEAD_NOD_GAP = HEAD_NOD_DURATION / 3F;
+
+    public void applyPosing(MatrixStack matrices, PlayerEntity player, BipedEntityModel<?> model, Context context) {
         Pony pony = Pony.of(player);
         float progress = pony.getAnimationProgress(MinecraftClient.getInstance().getTickDelta());
         Animation animation = pony.getAnimation();
-        boolean isPony = !MineLPConnector.getPlayerPonyRace(player).isDefault();
+        boolean isPony = !MineLPDelegate.getInstance().getPlayerPonyRace(player).isDefault();
+
+        ItemStack glasses = GlassesItem.getForEntity(player);
+
+        ModelPart head = model.getHead();
+
+        if (glasses.hasCustomName() && "Cool Shades".equals(glasses.getName().getString())) {
+            final float bop = AnimationUtil.beat(player.age, HEAD_NOD_DURATION, HEAD_NOD_GAP) * 3F;
+            head.pitch += bop / 10F;
+
+            float beat30 = bop / 30F;
+
+            if (isPony) {
+                float beat50 = bop / 50F;
+                float beat20 = bop / 20F;
+
+                model.leftArm.roll -= beat50;
+                model.rightArm.roll += beat50;
+
+                model.leftLeg.roll -= beat30;
+                model.leftLeg.pitch -= beat20;
+                model.rightLeg.roll += beat30;
+                model.rightLeg.pitch += beat20;
+            } else {
+                model.leftArm.roll -= beat30;
+                model.rightArm.roll += beat30;
+            }
+        }
 
         switch (animation) {
             case WOLOLO: {
@@ -154,6 +188,14 @@ public class PlayerPoser {
             }
             default:
         }
+
+        if (model instanceof PlayerEntityModel<?> m) {
+            m.leftSleeve.copyTransform(m.leftArm);
+            m.rightSleeve.copyTransform(m.rightArm);
+            m.leftPants.copyTransform(m.leftLeg);
+            m.rightPants.copyTransform(m.rightLeg);
+        }
+        model.hat.copyTransform(model.head);
     }
 
     private void rearUp(MatrixStack matrices, BipedEntityModel<?> model, float progress) {
@@ -202,5 +244,11 @@ public class PlayerPoser {
         public Optional<SoundEvent> getSound() {
             return sound;
         }
+    }
+
+    public enum Context {
+        FIRST_PERSON_LEFT,
+        FIRST_PERSON_RIGHT,
+        THIRD_PERSON
     }
 }

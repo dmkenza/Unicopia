@@ -15,8 +15,11 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityDimensions;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.SpawnGroup;
+import net.minecraft.entity.decoration.painting.PaintingVariant;
+import net.minecraft.entity.mob.FlyingEntity;
 import net.minecraft.tag.BiomeTags;
 import net.minecraft.util.registry.Registry;
+import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.biome.Biome;
 
 public interface UEntities {
@@ -45,7 +48,10 @@ public interface UEntities {
             .dimensions(EntityDimensions.fixed(0.1F, 0.1F)));
     EntityType<SpellbookEntity> SPELLBOOK = register("spellbook", FabricEntityTypeBuilder.create(SpawnGroup.MISC, SpellbookEntity::new)
             .trackRangeBlocks(200)
-            .dimensions(EntityDimensions.fixed(0.9F, 0.25F)));
+            .dimensions(EntityDimensions.fixed(0.9F, 0.5F)));
+    EntityType<AirBalloonEntity> AIR_BALLOON = register("air_balloon", FabricEntityTypeBuilder.create(SpawnGroup.MISC, AirBalloonEntity::new)
+            .trackRangeBlocks(1000)
+            .dimensions(EntityDimensions.fixed(2.5F, 0.1F)));
 
     static <T extends Entity> EntityType<T> register(String name, FabricEntityTypeBuilder<T> builder) {
         EntityType<T> type = builder.build();
@@ -56,22 +62,53 @@ public interface UEntities {
         FabricDefaultAttributeRegistry.register(BUTTERFLY, ButterflyEntity.createButterflyAttributes());
         FabricDefaultAttributeRegistry.register(SPELLBOOK, SpellbookEntity.createMobAttributes());
         FabricDefaultAttributeRegistry.register(TWITTERMITE, FairyEntity.createMobAttributes());
+        FabricDefaultAttributeRegistry.register(AIR_BALLOON, FlyingEntity.createMobAttributes());
 
-        final Predicate<BiomeSelectionContext> butterflySpawnable = BiomeSelectors.foundInOverworld()
-                .and(ctx -> ctx.getBiome().getPrecipitation() == Biome.Precipitation.RAIN);
+        if (!Unicopia.getConfig().disableButterflySpawning.get()) {
+            final Predicate<BiomeSelectionContext> butterflySpawnable = BiomeSelectors.foundInOverworld()
+                    .and(ctx -> ctx.getBiome().getPrecipitation() == Biome.Precipitation.RAIN);
 
-        BiomeModifications.addSpawn(butterflySpawnable.and(
-                    BiomeSelectors.tag(BiomeTags.IS_RIVER)
-                .or(BiomeSelectors.tag(BiomeTags.IS_FOREST))
-                .or(BiomeSelectors.tag(BiomeTags.IS_HILL))
-        ), SpawnGroup.AMBIENT, BUTTERFLY, 3, 3, 12);
-        BiomeModifications.addSpawn(butterflySpawnable.and(
-                    BiomeSelectors.tag(BiomeTags.IS_JUNGLE)
-                .or(BiomeSelectors.tag(BiomeTags.IS_MOUNTAIN))
-        ), SpawnGroup.AMBIENT, BUTTERFLY, 7, 5, 19);
+            BiomeModifications.addSpawn(butterflySpawnable.and(
+                        BiomeSelectors.tag(BiomeTags.IS_RIVER)
+                    .or(BiomeSelectors.tag(BiomeTags.IS_FOREST))
+                    .or(BiomeSelectors.tag(BiomeTags.IS_HILL))
+            ), SpawnGroup.AMBIENT, BUTTERFLY, 3, 3, 12);
+            BiomeModifications.addSpawn(butterflySpawnable.and(
+                        BiomeSelectors.tag(BiomeTags.IS_JUNGLE)
+                    .or(BiomeSelectors.tag(BiomeTags.IS_MOUNTAIN))
+            ), SpawnGroup.AMBIENT, BUTTERFLY, 7, 5, 19);
+        }
 
         UTradeOffers.bootstrap();
         EntityBehaviour.bootstrap();
         UEntityAttributes.bootstrap();
+        Paintings.bootstrap();
+    }
+
+    interface Paintings {
+        private static void register(String id, int width, int height) {
+            Registry.register(Registry.PAINTING_VARIANT, RegistryKey.of(Registry.PAINTING_VARIANT_KEY, Unicopia.id(id)), new PaintingVariant(16 * width, 16 * height));
+        }
+
+        static void bootstrap() {
+            register("bloom", 2, 1);
+            register("chicken", 2, 1);
+            register("bells", 2, 1);
+
+            register("crystal", 3, 3);
+            register("harmony", 3, 3);
+
+            register("equality", 2, 4);
+            register("solar", 2, 4);
+            register("lunar", 2, 4);
+            register("platinum", 2, 4);
+            register("hurricane", 2, 4);
+            register("pudding", 2, 4);
+            register("terra", 2, 4);
+            register("equestria", 2, 4);
+
+            register("blossom", 2, 3);
+            register("shadow", 2, 3);
+        }
     }
 }

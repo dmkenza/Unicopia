@@ -14,15 +14,12 @@ public abstract class AbstractSpell implements Spell {
     private boolean isDead;
     private boolean isDirty;
 
-    private final SpellType<?> type;
-
-    private SpellTraits traits;
+    private CustomisedSpellType<?> type;
 
     private UUID uuid = UUID.randomUUID();
 
-    protected AbstractSpell(SpellType<?> type, SpellTraits traits) {
+    protected AbstractSpell(CustomisedSpellType<?> type) {
         this.type = type;
-        this.traits = traits;
     }
 
     @Override
@@ -31,12 +28,17 @@ public abstract class AbstractSpell implements Spell {
     }
 
     @Override
-    public SpellType<?> getType() {
+    public final SpellType<?> getType() {
+        return type.type();
+    }
+
+    public final CustomisedSpellType<?> getTypeAndTraits() {
         return type;
     }
 
-    protected SpellTraits getTraits() {
-        return traits == null ? SpellTraits.EMPTY : traits;
+    @Override
+    public final SpellTraits getTraits() {
+        return type.traits();
     }
 
     @Override
@@ -84,7 +86,12 @@ public abstract class AbstractSpell implements Spell {
         }
         isDead = compound.getBoolean("dead");
         if (compound.contains("traits")) {
-            traits = SpellTraits.fromNbt(compound.getCompound("traits")).orElse(SpellTraits.EMPTY);
+            type = type.type().withTraits(SpellTraits.fromNbt(compound.getCompound("traits")).orElse(SpellTraits.EMPTY));
         }
+    }
+
+    @Override
+    public final String toString() {
+        return "Spell[uuid=" + uuid + ", dead=" + isDead + ", type=" + getType() + "]";
     }
 }

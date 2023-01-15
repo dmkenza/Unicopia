@@ -1,23 +1,57 @@
 package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
-import com.minelittlepony.unicopia.ability.magic.spell.ProjectileSpell;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
+import com.minelittlepony.unicopia.ability.magic.spell.*;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
+import com.minelittlepony.unicopia.entity.EntityReference;
+import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.particle.FollowingParticleEffect;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.UParticles;
+import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
+import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.ItemEntity;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
-public class AttractiveSpell extends ShieldSpell implements ProjectileSpell {
-    protected AttractiveSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+public class AttractiveSpell extends ShieldSpell implements HomingSpell, TimedSpell, ProjectileDelegate.EntityHitListener {
+
+    private final EntityReference<Entity> target = new EntityReference<>();
+
+    private final Timer timer;
+
+    protected AttractiveSpell(CustomisedSpellType<?> type) {
+        super(type);
+        timer = new Timer((120 + (int)(getTraits().get(Trait.FOCUS, 0, 160) * 19)) * 20);
+    }
+
+    @Override
+    public Timer getTimer() {
+        return timer;
+    }
+
+    @Override
+    public boolean tick(Caster<?> caster, Situation situation) {
+        timer.tick();
+
+        if (timer.getTicksRemaining() <= 0) {
+            return false;
+        }
+
+        setDirty();
+
+        Vec3d pos = caster.getOriginVector();
+        if (target.isPresent(caster.getReferenceWorld()) && target.get(caster.getReferenceWorld()).distanceTo(caster.getEntity()) > getDrawDropOffRange(caster)) {
+            target.get(caster.getReferenceWorld()).requestTeleport(pos.x, pos.y, pos.z);
+        }
+
+        return super.tick(caster, situation);
     }
 
     @Override
@@ -36,12 +70,15 @@ public class AttractiveSpell extends ShieldSpell implements ProjectileSpell {
 
     @Override
     public double getDrawDropOffRange(Caster<?> caster) {
-        return 10 + (caster.getLevel().get() * 2);
+        return 10 + (caster.getLevel().getScaled(8) * 2);
     }
 
     @Override
     protected boolean isValidTarget(Caster<?> source, Entity entity) {
-        return getTraits().get(Trait.FOCUS) > 10 ? entity instanceof ItemEntity : super.isValidTarget(source, entity);
+        if (target.isPresent(entity.world)) {
+            return target.get(entity.world) == entity;
+        }
+        return getTraits().get(Trait.KNOWLEDGE) > 10 ? entity instanceof ItemEntity : super.isValidTarget(source, entity);
     }
 
     @Override
@@ -72,7 +109,57 @@ public class AttractiveSpell extends ShieldSpell implements ProjectileSpell {
         if (distance < 0.5) {
             z += maxVel * 2;
         }
+        if (distance < 2) {
+            x = 0;
+            z = 0;
+        }
 
+        if (this.target.get(target.world) == target) {
+            target.fallDistance = 0;
+
+            if (target.isOnGround()) {
+                target.setPosition(target.getPos().add(0, 0.3, 0));
+                target.setOnGround(false);
+            }
+        }
         target.setVelocity(x, y, z);
+        Living.updateVelocity(target);
+    }
+
+    @Override
+    public boolean setTarget(Entity target) {
+        if (getTraits().get(Trait.ORDER) >= 20) {
+            this.target.set(target);
+            target.setGlowing(true);
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onDestroyed(Caster<?> caster) {
+        target.getOrEmpty(caster.getReferenceWorld()).ifPresent(target -> target.setGlowing(false));
+    }
+
+    @Override
+    public void onImpact(MagicProjectileEntity projectile, EntityHitResult hit) {
+        if (!isDead() && getTraits().get(Trait.CHAOS) > 0) {
+            setDead();
+            Caster.of(hit.getEntity()).ifPresent(getTypeAndTraits()::apply);
+        }
+    }
+
+    @Override
+    public void toNBT(NbtCompound compound) {
+        super.toNBT(compound);
+        compound.put("target", target.toNBT());
+        timer.toNBT(compound);
+    }
+
+    @Override
+    public void fromNBT(NbtCompound compound) {
+        super.fromNBT(compound);
+        target.fromNBT(compound.getCompound("target"));
+        timer.fromNBT(compound);
     }
 }

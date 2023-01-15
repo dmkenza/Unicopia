@@ -7,6 +7,7 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.entity.Equine;
 import com.minelittlepony.unicopia.entity.player.MagicReserves;
 import com.minelittlepony.unicopia.entity.player.Pony;
+import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
 
 import net.minecraft.entity.Entity;
@@ -39,6 +40,9 @@ public class RaceChangeStatusEffect extends StatusEffect {
     }
 
     public static boolean hasEffect(PlayerEntity player) {
+        if (UItems.ALICORN_AMULET.isApplicable(player)) {
+            return true;
+        }
         return player.getStatusEffects().stream().anyMatch(effect -> effect.getEffectType() instanceof RaceChangeStatusEffect);
     }
 
@@ -75,7 +79,7 @@ public class RaceChangeStatusEffect extends StatusEffect {
 
         int progression = ticks % (stage.ordinal() * STAGE_DURATION);
 
-        if (eq.getSpecies() == race || !race.isPermitted(entity instanceof PlayerEntity ? (PlayerEntity)entity : null)) {
+        if ((eq instanceof Pony pony ? pony.getActualSpecies() : eq.getSpecies()) == race || !race.isPermitted(entity instanceof PlayerEntity ? (PlayerEntity)entity : null)) {
             if (progression == 0 && entity instanceof PlayerEntity && stage == Stage.CRAWLING) {
                 ((PlayerEntity)entity).sendMessage(Stage.INITIAL.getMessage(race), true);
             }

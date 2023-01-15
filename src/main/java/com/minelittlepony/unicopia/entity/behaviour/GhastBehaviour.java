@@ -5,6 +5,7 @@ import com.minelittlepony.unicopia.entity.player.Pony;
 import net.minecraft.entity.mob.GhastEntity;
 import net.minecraft.entity.projectile.FireballEntity;
 import net.minecraft.util.math.Vec3d;
+import net.minecraft.world.WorldEvents;
 
 public class GhastBehaviour extends MobBehaviour<GhastEntity> {
 
@@ -18,11 +19,11 @@ public class GhastBehaviour extends MobBehaviour<GhastEntity> {
 
             if (sneaking) {
                 if (!entity.isSilent()) {
-                    entity.world.syncWorldEvent(null, 1015, entity.getBlockPos(), 0);
+                    entity.world.syncWorldEvent(null, WorldEvents.GHAST_WARNS, entity.getBlockPos(), 0);
                 }
             } else {
                 if (!entity.isSilent()) {
-                    entity.world.syncWorldEvent(null, 1016, entity.getBlockPos(), 0);
+                    entity.world.syncWorldEvent(null, WorldEvents.GHAST_SHOOTS, entity.getBlockPos(), 0);
                 }
 
                 Vec3d rot = player.getEntity().getRotationVec(1);
@@ -31,7 +32,7 @@ public class GhastBehaviour extends MobBehaviour<GhastEntity> {
                         rot.getX(),
                         rot.getY(),
                         rot.getZ(),
-                        entity.getFireballStrength() * (player.getLevel().get() + 1)
+                        (int)player.getLevel().getScaled(entity.getFireballStrength())
                 );
                 proj.updatePosition(
                         entity.getX() + rot.x * 4,

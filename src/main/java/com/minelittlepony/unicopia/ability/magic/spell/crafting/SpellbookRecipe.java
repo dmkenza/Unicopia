@@ -1,7 +1,9 @@
 package com.minelittlepony.unicopia.ability.magic.spell.crafting;
 
+import java.util.List;
+
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
-import com.minelittlepony.unicopia.container.SpellbookScreenHandler.SpellbookInventory;
+import com.minelittlepony.unicopia.container.inventory.SpellbookInventory;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.item.URecipes;
 
@@ -27,11 +29,23 @@ public interface SpellbookRecipe extends Recipe<SpellbookInventory> {
 
     void buildCraftingTree(CraftingTreeBuilder builder);
 
+    int getPriority();
+
     interface CraftingTreeBuilder {
         void input(ItemStack...stack);
 
         void input(Trait trait, float value);
 
+        void mystery(ItemStack...stacks);
+
         void result(ItemStack...stack);
+
+        default void input(List<ItemStack> stacks) {
+            input(stacks.toArray(ItemStack[]::new));
+        }
+
+        default void mystery(List<ItemStack> stacks) {
+            mystery(stacks.toArray(ItemStack[]::new));
+        }
     }
 }

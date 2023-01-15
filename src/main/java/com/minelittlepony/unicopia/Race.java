@@ -1,8 +1,11 @@
 package com.minelittlepony.unicopia;
 
-import java.util.Set;
+import java.util.*;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.jetbrains.annotations.Nullable;
+import org.spongepowered.include.com.google.common.base.Objects;
 
 import com.google.common.base.Strings;
 import com.minelittlepony.unicopia.ability.magic.Affine;
@@ -102,6 +105,11 @@ public final class Race implements Affine {
         return canFly() && this != CHANGELING && this != BAT;
     }
 
+    public Identifier getId() {
+        Identifier id = REGISTRY.getId(this);
+        return id;
+    }
+
     public Text getDisplayName() {
         return Text.translatable(getTranslationKey());
     }
@@ -111,8 +119,13 @@ public final class Race implements Affine {
     }
 
     public String getTranslationKey() {
-        Identifier id = REGISTRY.getId(this);
+        Identifier id = getId();
         return String.format("%s.race.%s", id.getNamespace(), id.getPath().toLowerCase());
+    }
+
+    public Identifier getIcon() {
+        Identifier id = getId();
+        return new Identifier(id.getNamespace(), "textures/gui/race/" + id.getPath() + ".png");
     }
 
     public boolean isPermitted(@Nullable PlayerEntity sender) {
@@ -120,11 +133,11 @@ public final class Race implements Affine {
             return false;
         }
 
-        Set<Race> whitelist = Unicopia.getConfig().speciesWhiteList.get();
+        Set<String> whitelist = Unicopia.getConfig().speciesWhiteList.get();
 
         return isDefault()
                 || whitelist.isEmpty()
-                || whitelist.contains(this);
+                || whitelist.contains(getId().toString());
     }
 
     public Race validate(PlayerEntity sender) {
@@ -139,8 +152,23 @@ public final class Race implements Affine {
         return this;
     }
 
+    @Override
+    public int hashCode() {
+        return getId().hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        return o instanceof Race race && Objects.equal(race.getId(), getId());
+    }
+
+    @Override
+    public String toString() {
+        return "Race{ " + getId().toString() + " }";
+    }
+
     public boolean equals(String s) {
-        return REGISTRY.getId(this).toString().equalsIgnoreCase(s)
+        return getId().toString().equalsIgnoreCase(s)
                 || getTranslationKey().equalsIgnoreCase(s);
     }
 
@@ -165,6 +193,20 @@ public final class Race implements Affine {
     public static Race fromArgument(CommandContext<ServerCommandSource> context, String name) throws CommandSyntaxException {
         Identifier id = context.getArgument(name, RegistryKey.class).getValue();
         return REGISTRY.getOrEmpty(id).orElseThrow(() -> UNKNOWN_RACE_EXCEPTION.create(id));
+    }
+
+    public static Set<Race> allPermitted(PlayerEntity player) {
+        return REGISTRY.stream().filter(r -> r.isPermitted(player)).collect(Collectors.toSet());
+    }
+
+    public record Composite (Race physical, Race pseudo) {
+        public boolean includes(Race race) {
+            return physical == race || pseudo == race;
+        }
+
+        public boolean any(Predicate<Race> test) {
+            return test.test(physical) || test.test(pseudo);
+        }
     }
 }
 

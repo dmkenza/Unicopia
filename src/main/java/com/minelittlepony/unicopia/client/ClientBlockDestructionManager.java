@@ -2,7 +2,8 @@ package com.minelittlepony.unicopia.client;
 
 import java.util.SortedSet;
 import com.google.common.collect.Sets;
-import com.minelittlepony.unicopia.BlockDestructionManager;
+import com.minelittlepony.unicopia.block.data.BlockDestructionManager;
+
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
 import net.minecraft.client.render.BlockBreakingInfo;
@@ -16,7 +17,7 @@ public class ClientBlockDestructionManager {
 
     private final Object locker = new Object();
 
-    public void setBlockDestruction(long pos, int amount) {
+    public void setBlockDestruction(long pos, float amount) {
         synchronized (locker) {
             if (amount <= 0 || amount > BlockDestructionManager.MAX_DAMAGE) {
                 destructions.remove(pos);
@@ -69,9 +70,9 @@ public class ClientBlockDestructionManager {
             return amount < 0 || age-- <= 0;
         }
 
-        void set(int amount) {
+        void set(float amount) {
             this.age = 50;
-            info.setStage(amount >= 0 && amount < BlockDestructionManager.MAX_DAMAGE ? amount : BlockDestructionManager.UNSET_DAMAGE);
+            info.setStage(amount >= 0 && amount < BlockDestructionManager.MAX_DAMAGE ? (int)amount : BlockDestructionManager.UNSET_DAMAGE);
         }
     }
 

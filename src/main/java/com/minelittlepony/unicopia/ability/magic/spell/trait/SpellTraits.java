@@ -1,6 +1,5 @@
 package com.minelittlepony.unicopia.ability.magic.spell.trait;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumMap;
@@ -34,9 +33,20 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.Registry;
 
 public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     public static final SpellTraits EMPTY = new SpellTraits(Map.of());
+
+    private static Map<Identifier, SpellTraits> REGISTRY = new HashMap<>();
+
+    public static void load(Map<Identifier, SpellTraits> newRegistry) {
+        REGISTRY = new HashMap<>(newRegistry);
+    }
+
+    public static Map<Identifier, SpellTraits> all() {
+        return new HashMap<>(REGISTRY);
+    }
 
     private final Map<Trait, Float> traits;
 
@@ -48,12 +58,20 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         this(new EnumMap<>(from.traits));
     }
 
+    public float getCorruption() {
+        return (float)stream().filter(e -> e.getValue() != 0).mapToDouble(e -> e.getKey().getGroup().getCorruption()).sum();
+    }
+
     public SpellTraits multiply(float factor) {
         return factor == 0 ? EMPTY : map(v -> v * factor);
     }
 
     public SpellTraits add(float amount) {
         return amount == 0 ? this : map(v -> v + amount);
+    }
+
+    public SpellTraits add(SpellTraits traits) {
+        return union(this, traits);
     }
 
     public SpellTraits map(Function<Float, Float> function) {
@@ -169,9 +187,7 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     }
 
     public static SpellTraits of(Inventory inventory) {
-        List<ItemStack> stacks = new ArrayList<>();
-        InventoryUtil.iterate(inventory).forEach(stacks::add);
-        return of(stacks);
+        return of(InventoryUtil.stream(inventory).toList());
     }
 
     public static SpellTraits of(Collection<ItemStack> stacks) {
@@ -183,11 +199,18 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
     }
 
     public static SpellTraits of(Item item) {
-        return TraitLoader.INSTANCE.getTraits(item);
+        return REGISTRY.getOrDefault(Registry.ITEM.getId(item), EMPTY);
     }
 
     public static SpellTraits of(Block block) {
         return of(block.asItem());
+    }
+
+    public static Stream<Item> getItems(Trait trait) {
+        return REGISTRY.entrySet().stream()
+            .filter(e -> e.getValue().get(trait) > 0)
+            .map(Map.Entry::getKey)
+            .flatMap(id -> Registry.ITEM.getOrEmpty(id).stream());
     }
 
     public static Optional<SpellTraits> getEmbeddedTraits(ItemStack stack) {
@@ -215,17 +238,16 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
         return fromEntries(streamFromJson(traits));
     }
 
-    public static Optional<SpellTraits> fromPacket(PacketByteBuf buf) {
+    public static Optional<SpellTraits> fromPacketOrEmpty(PacketByteBuf buf) {
+        return buf.readOptional(SpellTraits::fromPacket).filter(SpellTraits::isPresent);
+    }
 
-        boolean present = buf.readBoolean();
-        if (!present) {
-            return Optional.empty();
-        }
+    public static SpellTraits fromPacket(PacketByteBuf buf) {
 
         Map<Trait, Float> entries = new HashMap<>();
         int count = buf.readInt();
         if (count <= 0) {
-            return Optional.empty();
+            return SpellTraits.EMPTY;
         }
 
         for (int i = 0; i < count; i++) {
@@ -240,9 +262,9 @@ public final class SpellTraits implements Iterable<Map.Entry<Trait, Float>> {
             });
         }
         if (entries.isEmpty()) {
-            return Optional.empty();
+            return SpellTraits.EMPTY;
         }
-        return Optional.of(new SpellTraits(entries));
+        return new SpellTraits(entries);
     }
 
     public static Optional<SpellTraits> fromString(String traits) {

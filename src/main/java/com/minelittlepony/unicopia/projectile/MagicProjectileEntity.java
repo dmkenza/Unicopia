@@ -1,6 +1,8 @@
 package com.minelittlepony.unicopia.projectile;
 
+import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -10,7 +12,6 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.Levelled;
 import com.minelittlepony.unicopia.ability.magic.SpellContainer;
 import com.minelittlepony.unicopia.ability.magic.SpellContainer.Operation;
-import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.entity.EntityPhysics;
@@ -55,7 +56,6 @@ public class MagicProjectileEntity extends ThrownItemEntity implements Caster<Li
     private static final TrackedData<Float> GRAVITY = DataTracker.registerData(MagicProjectileEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Boolean> HYDROPHOBIC = DataTracker.registerData(MagicProjectileEntity.class, TrackedDataHandlerRegistry.BOOLEAN);
     private static final TrackedData<NbtCompound> EFFECT = DataTracker.registerData(MagicProjectileEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
-    private static final LevelStore LEVELS = Levelled.fixed(1);
 
     public static final byte PROJECTILE_COLLISSION = 3;
 
@@ -117,7 +117,12 @@ public class MagicProjectileEntity extends ThrownItemEntity implements Caster<Li
 
     @Override
     public LevelStore getLevel() {
-        return LEVELS;
+        return Caster.of(getMaster()).map(Caster::getLevel).orElse(Levelled.EMPTY);
+    }
+
+    @Override
+    public LevelStore getCorruption() {
+        return Caster.of(getMaster()).map(Caster::getCorruption).orElse(Levelled.EMPTY);
     }
 
     @Override
@@ -260,10 +265,16 @@ public class MagicProjectileEntity extends ThrownItemEntity implements Caster<Li
     }
 
     @Override
+    public void remove(RemovalReason reason) {
+        super.remove(reason);
+        getSpellSlot().clear();
+    }
+
+    @Override
     protected void onBlockHit(BlockHitResult hit) {
         super.onBlockHit(hit);
 
-        forEachDelegates(effect -> effect.onImpact(this, hit.getBlockPos(), world.getBlockState(hit.getBlockPos())));
+        forEachDelegates(effect -> effect.onImpact(this, hit), ProjectileDelegate.BlockHitListener.PREDICATE);
     }
 
     @Override
@@ -281,21 +292,16 @@ public class MagicProjectileEntity extends ThrownItemEntity implements Caster<Li
                 entity.damage(DamageSource.thrownProjectile(this, getOwner()), getThrowDamage());
             }
 
-            forEachDelegates(effect -> effect.onImpact(this, entity));
+            forEachDelegates(effect -> effect.onImpact(this, hit), ProjectileDelegate.EntityHitListener.PREDICATE);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    protected void forEachDelegates(Consumer<ProjectileDelegate<MagicProjectileEntity>> consumer) {
+    protected <T extends ProjectileDelegate> void forEachDelegates(Consumer<T> consumer, Function<Object, T> predicate) {
         getSpellSlot().forEach(spell -> {
-            if (SpellPredicate.HAS_PROJECTILE_EVENTS.test(spell)) {
-                consumer.accept((ProjectileDelegate<MagicProjectileEntity>)spell);
-            }
+            Optional.ofNullable(predicate.apply(spell)).ifPresent(consumer);
             return Operation.SKIP;
-        }, true);
-        if (getItem().getItem() instanceof ProjectileDelegate) {
-            consumer.accept(((ProjectileDelegate<MagicProjectileEntity>)getItem().getItem()));
-        }
+        }, world.isClient);
+        Optional.ofNullable(predicate.apply(getItem().getItem())).ifPresent(consumer);
     }
 
     @Override

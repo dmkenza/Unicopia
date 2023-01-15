@@ -5,6 +5,7 @@ import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.block.state.StateMaps;
+import com.minelittlepony.unicopia.block.state.StatePredicate;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
 import com.minelittlepony.unicopia.util.PosHelper;
@@ -12,11 +13,7 @@ import com.minelittlepony.unicopia.util.VecHelper;
 import com.minelittlepony.unicopia.util.shape.Shape;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.Material;
-import net.minecraft.block.PlantBlock;
+import net.minecraft.block.*;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.TntEntity;
@@ -34,21 +31,21 @@ public class IceSpell extends AbstractSpell {
             .with(Trait.ICE, 15)
             .build();
 
-    private final int rad = 3;
-    private final Shape outerRange = new Sphere(false, rad);
+    private static final int RADIUS = 3;
+    private static final Shape OUTER_RANGE = new Sphere(false, RADIUS);
 
-    protected IceSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    protected IceSpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
         boolean submerged = source.getEntity().isSubmergedInWater() || source.getEntity().isSubmergedIn(FluidTags.LAVA);
 
-        long blocksAffected = PosHelper.getAllInRegionMutable(source.getOrigin(), outerRange).filter(i -> {
+        long blocksAffected = OUTER_RANGE.translate(source.getOrigin()).getBlockPositions().filter(i -> {
             if (source.canModifyAt(i) && applyBlockSingle(source.getEntity(), source.getReferenceWorld(), i, situation)) {
 
-                if (submerged & source.getOrigin().isWithinDistance(i, rad - 1)) {
+                if (submerged & source.getOrigin().isWithinDistance(i, RADIUS - 1)) {
                     BlockState state = source.getReferenceWorld().getBlockState(i);
                     if (state.isIn(BlockTags.ICE) || state.isOf(Blocks.OBSIDIAN)) {
                         source.getReferenceWorld().setBlockState(i, Blocks.AIR.getDefaultState(), Block.NOTIFY_NEIGHBORS);
@@ -93,14 +90,13 @@ public class IceSpell extends AbstractSpell {
     private boolean applyBlockSingle(Entity owner, World world, BlockPos pos, Situation situation) {
         BlockState state = world.getBlockState(pos);
 
-        if ((situation == Situation.PROJECTILE
-                && StateMaps.SNOW_PILED.convert(world, pos))
-                || StateMaps.ICE_AFFECTED.convert(world, pos)) {
+        if ((situation == Situation.PROJECTILE && StateMaps.SNOW_PILED.convert(world, pos))
+            || StateMaps.ICE_AFFECTED.convert(world, pos)) {
             return true;
         }
 
         if (world.isTopSolid(pos, owner)
-                || state.isOf(Blocks.SNOW)
+                || (state.isOf(Blocks.SNOW) && state.get(SnowBlock.LAYERS) == SnowBlock.MAX_LAYERS)
                 || state.isIn(BlockTags.LEAVES)) {
             addSnowLayer(world, pos.up());
             return true;
@@ -117,16 +113,15 @@ public class IceSpell extends AbstractSpell {
     }
 
     private static boolean isSurroundedByIce(World w, BlockPos pos) {
-        return !PosHelper.adjacentNeighbours(pos).anyMatch(i ->
+        return PosHelper.adjacentNeighbours(pos).allMatch(i ->
             w.getBlockState(i).getMaterial() == Material.ICE
         );
     }
 
     private static void addSnowLayer(World world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
-        Block id = state.getBlock();
 
-        if (id == Blocks.AIR || (id instanceof PlantBlock)) {
+        if (state.isAir() || StatePredicate.isPlant(state)) {
             world.setBlockState(pos, Blocks.SNOW.getDefaultState(), 3);
         }
     }

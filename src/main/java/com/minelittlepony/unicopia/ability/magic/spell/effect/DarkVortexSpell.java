@@ -5,31 +5,30 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.magic.Affine;
 import com.minelittlepony.unicopia.ability.magic.Caster;
-import com.minelittlepony.unicopia.ability.magic.spell.ProjectileSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
+import com.minelittlepony.unicopia.particle.ParticleHandle.Attachment;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.particle.SphereParticleEffect;
 import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
-import com.minelittlepony.unicopia.util.PosHelper;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
-import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.FallingBlockEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.PersistentProjectileEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.explosion.Explosion.DestructionType;
@@ -41,7 +40,7 @@ import net.minecraft.world.explosion.Explosion.DestructionType;
  *  - Garbage bin
  *  - Link with a teleportation spell to create a wormhole
  */
-public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell {
+public class DarkVortexSpell extends AttractiveSpell implements ProjectileDelegate.BlockHitListener {
     public static final SpellTraits DEFAULT_TRAITS = new SpellTraits.Builder()
             .with(Trait.CHAOS, 5)
             .with(Trait.KNOWLEDGE, 1)
@@ -54,13 +53,14 @@ public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell 
     private int age = 0;
     private float accumulatedMass = 0;
 
-    protected DarkVortexSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    protected DarkVortexSpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     @Override
-    public void onImpact(MagicProjectileEntity projectile, BlockPos pos, BlockState state) {
+    public void onImpact(MagicProjectileEntity projectile, BlockHitResult hit) {
         if (!projectile.isClient()) {
+            BlockPos pos = hit.getBlockPos();
             projectile.world.createExplosion(projectile, pos.getX(), pos.getY(), pos.getZ(), 3, DestructionType.NONE);
             toPlaceable().tick(projectile, Situation.BODY);
         }
@@ -117,13 +117,13 @@ public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell 
         particlEffect.update(getUuid(), source, spawner -> {
             spawner.addParticle(new SphereParticleEffect(UParticles.SPHERE, getType().getColor(), 0.99F, radius, SPHERE_OFFSET), source.getOriginVector(), Vec3d.ZERO);
         }).ifPresent(p -> {
-            p.setAttribute(0, radius);
+            p.setAttribute(Attachment.ATTR_RADIUS, radius);
         });
         particlEffect.update(getUuid(), "_ring", source, spawner -> {
             spawner.addParticle(new SphereParticleEffect(UParticles.DISK, 0xFFFFFFFF, 0.4F, radius + 1, SPHERE_OFFSET), getOrigin(source), Vec3d.ZERO);
         }).ifPresent(p -> {
-            p.setAttribute(0, radius * 2F);
-            p.setAttribute(1, 0xAAAAAA);
+            p.setAttribute(Attachment.ATTR_RADIUS, radius * 2F);
+            p.setAttribute(Attachment.ATTR_COLOR, 0xAAAAAA);
         });
 
         double angle = age % 260;
@@ -156,7 +156,7 @@ public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell 
 
             if (radius > 2) {
                 Vec3d origin = getOrigin(source);
-                PosHelper.getAllInRegionMutable(source.getOrigin(), new Sphere(false, radius)).forEach(i -> {
+                new Sphere(false, radius).translate(origin).getBlockPositions().forEach(i -> {
                     if (!canAffect(source, i)) {
                         return;
                     }
@@ -198,7 +198,6 @@ public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell 
         return 10 + Math.min(15, Math.min(0.5F + pulse, (float)Math.exp(age) / 8F - 90) + accumulatedMass / 10F) + pulse;
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     protected void applyRadialEffect(Caster<?> source, Entity target, double distance, double radius) {
 
@@ -212,10 +211,10 @@ public class DarkVortexSpell extends AttractiveSpell implements ProjectileSpell 
             @Nullable
             Entity master = source.getMaster();
 
-            if (target instanceof MagicProjectileEntity) {
-                Item item = ((MagicProjectileEntity)target).getStack().getItem();
-                if (item instanceof ProjectileDelegate && master != null) {
-                    ((ProjectileDelegate<ProjectileEntity>) item).onImpact(((ProjectileEntity)target), master);
+            if (target instanceof MagicProjectileEntity projectile) {
+                Item item = projectile.getStack().getItem();
+                if (item instanceof ProjectileDelegate.EntityHitListener p && master != null) {
+                    p.onImpact(projectile, new EntityHitResult(master));
                 }
             } else if (target instanceof PersistentProjectileEntity) {
                 if (master != null) {

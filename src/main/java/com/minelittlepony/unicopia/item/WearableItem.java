@@ -1,43 +1,47 @@
 package com.minelittlepony.unicopia.item;
 
+import com.minelittlepony.unicopia.trinkets.TrinketsDelegate;
+
 import net.fabricmc.fabric.api.item.v1.FabricItemSettings;
 import net.minecraft.block.DispenserBlock;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.block.dispenser.DispenserBehavior;
+import net.minecraft.block.dispenser.ItemDispenserBehavior;
+import net.minecraft.entity.*;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ArmorItem;
 import net.minecraft.item.ArmorMaterials;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Wearable;
+import net.minecraft.predicate.entity.EntityPredicates;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.math.*;
 import net.minecraft.world.World;
 
 public abstract class WearableItem extends Item implements Wearable {
 
     public WearableItem(FabricItemSettings settings) {
-        super(settings.equipmentSlot(s -> ((WearableItem)s.getItem()).getPreferredSlot(s)));
-        DispenserBlock.registerBehavior(this, ArmorItem.DISPENSER_BEHAVIOR);
+        super(configureEquipmentSlotSupplier(settings));
+        DispenserBlock.registerBehavior(this, DISPENSER_BEHAVIOR);
+        TrinketsDelegate.getInstance().registerTrinket(this);
+    }
+
+    private static FabricItemSettings configureEquipmentSlotSupplier(FabricItemSettings settings) {
+        if (TrinketsDelegate.hasTrinkets()) {
+            return settings;
+        }
+        return settings.equipmentSlot(s -> ((WearableItem)s.getItem()).getPreferredSlot(s));
     }
 
     @Override
     public TypedActionResult<ItemStack> use(World world, PlayerEntity player, Hand hand) {
         ItemStack stack = player.getStackInHand(hand);
-
-        EquipmentSlot slot = MobEntity.getPreferredEquipmentSlot(stack);
-        ItemStack currentArmor = player.getEquippedStack(slot);
-
-        if (currentArmor.isEmpty()) {
-            ItemStack result = stack.copy();
-            result.setCount(1);
-            player.equipStack(slot, result);
-            stack.decrement(1);
-            return TypedActionResult.success(stack, world.isClient());
-        }
-
-        return TypedActionResult.fail(stack);
+        return TrinketsDelegate.getInstance().getAvailableTrinketSlots(player, TrinketsDelegate.ALL).stream()
+                .filter(slotId -> TrinketsDelegate.getInstance().equipStack(player, slotId, stack))
+                .findAny()
+                .map(slotId -> TypedActionResult.success(stack, world.isClient()))
+                .orElseGet(() -> TypedActionResult.fail(stack));
     }
 
     @Override
@@ -48,4 +52,26 @@ public abstract class WearableItem extends Item implements Wearable {
     public EquipmentSlot getPreferredSlot(ItemStack stack) {
         return EquipmentSlot.OFFHAND;
     }
+
+    public static boolean dispenseArmor(BlockPointer pointer, ItemStack armor) {
+        return pointer.getWorld().getEntitiesByClass(
+                    LivingEntity.class,
+                    new Box(pointer.getPos().offset(pointer.getBlockState().get(DispenserBlock.FACING))),
+                    EntityPredicates.EXCEPT_SPECTATOR
+                )
+                .stream()
+                .flatMap(entity -> TrinketsDelegate.getInstance()
+                        .getAvailableTrinketSlots(entity, TrinketsDelegate.ALL)
+                        .stream()
+                        .filter(slotId -> TrinketsDelegate.getInstance().equipStack(entity, slotId, armor)))
+                .findFirst()
+                .isPresent();
+    }
+
+    private static final DispenserBehavior DISPENSER_BEHAVIOR = new ItemDispenserBehavior(){
+        @Override
+        protected ItemStack dispenseSilently(BlockPointer pointer, ItemStack stack) {
+            return dispenseArmor(pointer, stack) ? stack : super.dispenseSilently(pointer, stack);
+        }
+    };
 }

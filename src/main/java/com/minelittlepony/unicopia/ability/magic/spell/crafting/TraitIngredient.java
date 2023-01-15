@@ -12,7 +12,7 @@ import net.minecraft.util.JsonHelper;
 public record TraitIngredient (
         Optional<SpellTraits> min,
         Optional<SpellTraits> max
-        ) implements Predicate<SpellTraits> {
+    ) implements Predicate<SpellTraits> {
 
     @Override
     public boolean test(SpellTraits t) {
@@ -27,7 +27,7 @@ public record TraitIngredient (
     }
 
     public static TraitIngredient fromPacket(PacketByteBuf buf) {
-        return new TraitIngredient(SpellTraits.fromPacket(buf), SpellTraits.fromPacket(buf));
+        return new TraitIngredient(SpellTraits.fromPacketOrEmpty(buf), SpellTraits.fromPacketOrEmpty(buf));
     }
 
     public static TraitIngredient fromJson(JsonObject json) {

@@ -2,12 +2,14 @@ package com.minelittlepony.unicopia.network;
 
 import com.minelittlepony.unicopia.util.network.S2CBroadcastPacketType;
 import com.minelittlepony.unicopia.util.network.S2CPacketType;
-import com.minelittlepony.unicopia.Unicopia;
+import com.minelittlepony.unicopia.*;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.util.network.C2SPacketType;
 import com.minelittlepony.unicopia.util.network.SimpleNetworking;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
 
 public interface Channel {
@@ -25,14 +27,31 @@ public interface Channel {
     Identifier SERVER_SELECT_TRIBE_ID = Unicopia.id("select_tribe");
     S2CPacketType<MsgTribeSelect> SERVER_SELECT_TRIBE = SimpleNetworking.serverToClient(SERVER_SELECT_TRIBE_ID, MsgTribeSelect::new);
 
+    S2CPacketType<MsgSpellbookStateChanged<PlayerEntity>> SERVER_SPELLBOOK_UPDATE = SimpleNetworking.serverToClient(Unicopia.id("server_spellbook_update"), MsgSpellbookStateChanged::new);
+    C2SPacketType<MsgSpellbookStateChanged<ServerPlayerEntity>> CLIENT_SPELLBOOK_UPDATE = SimpleNetworking.clientToServer(Unicopia.id("client_spellbook_update"), MsgSpellbookStateChanged::new);
+
+    Identifier SERVER_RESOURCES_SEND_ID = Unicopia.id("resources_send");
+    S2CPacketType<MsgServerResources> SERVER_RESOURCES_SEND = SimpleNetworking.serverToClient(SERVER_RESOURCES_SEND_ID, MsgServerResources::new);
+
     S2CBroadcastPacketType<MsgOtherPlayerCapabilities> SERVER_OTHER_PLAYER_CAPABILITIES = SimpleNetworking.serverToClients(Unicopia.id("other_player_capabilities"), MsgOtherPlayerCapabilities::new);
     S2CBroadcastPacketType<MsgPlayerAnimationChange> SERVER_PLAYER_ANIMATION_CHANGE = SimpleNetworking.serverToClients(Unicopia.id("other_player_animation_change"), MsgPlayerAnimationChange::new);
 
     static void bootstrap() {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            if (!Pony.of(handler.player).isSpeciesPersisted()) {
-                sender.sendPacket(SERVER_SELECT_TRIBE_ID, new MsgTribeSelect(handler.player).toBuffer());
+            Pony pony = Pony.of(handler.player);
+            if (!pony.isSpeciesPersisted()) {
+                Race race = WorldTribeManager.forWorld(handler.player.getWorld()).getDefaultRace();
+                if (!race.isPermitted(handler.player)) {
+                    race = Race.HUMAN;
+                }
+                if (race.isUsable()) {
+                    pony.setSpecies(race);
+                    Unicopia.LOGGER.info("Setting {}'s race to {} due to host setting", handler.player.getDisplayName().getString(), Race.REGISTRY.getId(race).toString());
+                } else {
+                    sender.sendPacket(SERVER_SELECT_TRIBE.getId(), new MsgTribeSelect(handler.player).toBuffer());
+                }
             }
+            sender.sendPacket(SERVER_RESOURCES_SEND.getId(), new MsgServerResources().toBuffer());
         });
     }
 }

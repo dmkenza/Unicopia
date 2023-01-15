@@ -9,8 +9,7 @@ import org.jetbrains.annotations.Nullable;
 import com.minelittlepony.unicopia.Affinity;
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.WeaklyOwned;
-import com.minelittlepony.unicopia.ability.magic.Affine;
-import com.minelittlepony.unicopia.ability.magic.Levelled;
+import com.minelittlepony.unicopia.ability.magic.*;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.TargetSelecter;
 import com.minelittlepony.unicopia.entity.ai.BreakHeartGoal;
@@ -21,18 +20,15 @@ import com.minelittlepony.unicopia.entity.ai.WantItTakeItGoal;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.ai.goal.ActiveTargetGoal;
-import net.minecraft.entity.ai.goal.GoalSelector;
+import net.minecraft.entity.ai.goal.*;
 import net.minecraft.entity.attribute.DefaultAttributeContainer;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.SlimeEntity;
-import net.minecraft.entity.passive.PigEntity;
+import net.minecraft.entity.mob.*;
+import net.minecraft.entity.passive.*;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
@@ -44,8 +40,6 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned<Living
     private static final TrackedData<NbtCompound> MASTER = DataTracker.registerData(LivingEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
     public static final TrackedData<Float> GRAVITY = DataTracker.registerData(LivingEntity.class, TrackedDataHandlerRegistry.FLOAT);
     private static final TrackedData<Integer> EATING = DataTracker.registerData(LivingEntity.class, TrackedDataHandlerRegistry.INTEGER);
-
-    private static final LevelStore LEVELS = Levelled.fixed(0);
 
     public static void boostrap() {}
 
@@ -123,13 +117,20 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned<Living
         if (entity.getType().getSpawnGroup() == SpawnGroup.MONSTER) {
             goals.add(3, new BreakHeartGoal((MobEntity)entity, targetter));
         }
-        if (entity instanceof PigEntity) {
-            eatMuffinGoal = new EatMuffinGoal((MobEntity)entity, targetter);
+        if (entity instanceof PigEntity pig) {
+            eatMuffinGoal = new EatMuffinGoal(pig, targetter);
             goals.add(3, eatMuffinGoal);
         }
 
         if (master.isPresent(getReferenceWorld())) {
             initMinionAi();
+        }
+
+        if (entity instanceof CreeperEntity mob) {
+            goals.add(1, new FleeEntityGoal<>(mob, LivingEntity.class, 10, 1.5, 1.9, AmuletSelectors.ALICORN_AMULET));
+        }
+        if (entity instanceof PassiveEntity mob) {
+            goals.add(1, new FleeEntityGoal<>(mob, LivingEntity.class, 10, 1.1, 1.7, AmuletSelectors.ALICORN_AMULET_AFTER_1_DAYS));
         }
     }
 
@@ -206,7 +207,12 @@ public class Creature extends Living<LivingEntity> implements WeaklyOwned<Living
 
     @Override
     public LevelStore getLevel() {
-        return LEVELS;
+        return Levelled.EMPTY;
+    }
+
+    @Override
+    public LevelStore getCorruption() {
+        return Levelled.EMPTY;
     }
 
     @Override

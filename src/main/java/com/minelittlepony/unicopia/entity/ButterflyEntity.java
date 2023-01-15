@@ -76,7 +76,7 @@ public class ButterflyEntity extends AmbientEntity {
 
     @Override
     protected Entity.MoveEffect getMoveEffect() {
-        return Entity.MoveEffect.EVENTS;
+        return Entity.MoveEffect.NONE;
     }
 
     @Override
@@ -100,11 +100,6 @@ public class ButterflyEntity extends AmbientEntity {
     @Override
     public boolean isPushable() {
         return false;
-    }
-
-    @Override
-    public boolean isCollidable() {
-        return true;
     }
 
     @Override
@@ -314,8 +309,8 @@ public class ButterflyEntity extends AmbientEntity {
         super.writeCustomDataToNbt(nbt);
         nbt.putInt("ticksResting", ticksResting);
         nbt.putInt("breedingCooldown", breedingCooldown);
-        NbtSerialisable.writeBlockPos("hoveringPosition", hoveringPosition, nbt);
-        NbtSerialisable.writeBlockPos("flowerPosition", flowerPosition, nbt);
+        NbtSerialisable.BLOCK_POS.writeOptional("hoveringPosition", nbt, hoveringPosition);
+        NbtSerialisable.BLOCK_POS.writeOptional("flowerPosition", nbt, flowerPosition);
         NbtCompound visited = new NbtCompound();
         this.visited.forEach((pos, time) -> {
             visited.putLong(String.valueOf(pos.asLong()), time);
@@ -328,8 +323,8 @@ public class ButterflyEntity extends AmbientEntity {
         super.readCustomDataFromNbt(nbt);
         ticksResting = nbt.getInt("ticksResting");
         breedingCooldown = nbt.getInt("breedingCooldown");
-        hoveringPosition = NbtSerialisable.readBlockPos("hoveringPosition", nbt);
-        flowerPosition = NbtSerialisable.readBlockPos("flowerPosition", nbt);
+        hoveringPosition = NbtSerialisable.BLOCK_POS.readOptional("hoveringPosition", nbt);
+        flowerPosition = NbtSerialisable.BLOCK_POS.readOptional("flowerPosition", nbt);
         NbtCompound visited = nbt.getCompound("visited");
         this.visited.clear();
         visited.getKeys().forEach(key -> {

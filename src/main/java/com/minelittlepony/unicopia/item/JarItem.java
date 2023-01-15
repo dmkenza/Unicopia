@@ -6,26 +6,25 @@ import com.minelittlepony.unicopia.entity.IItemEntity;
 import com.minelittlepony.unicopia.entity.ItemImpl;
 import com.minelittlepony.unicopia.particle.ParticleUtils;
 import com.minelittlepony.unicopia.particle.UParticles;
+import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
+import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
+
 import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.entity.LightningEntity;
-import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.entity.Entity.RemovalReason;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.ActionResult;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.WorldEvents;
 
-public class JarItem extends ProjectileItem implements ItemImpl.GroundTickCallback {
+public class JarItem extends ProjectileItem implements ItemImpl.GroundTickCallback, ProjectileDelegate.HitListener {
 
     private final boolean rain;
     private final boolean thunder;
@@ -81,16 +80,7 @@ public class JarItem extends ProjectileItem implements ItemImpl.GroundTickCallba
     }
 
     @Override
-    public void onImpact(ProjectileEntity projectile, BlockPos pos, BlockState state) {
-        onImpact(projectile);
-    }
-
-    @Override
-    public void onImpact(ProjectileEntity projectile, Entity entity) {
-        onImpact(projectile);
-    }
-
-    protected void onImpact(ProjectileEntity projectile) {
+    public void onImpact(MagicProjectileEntity projectile) {
         if (!projectile.world.isClient()) {
             ServerWorld world = (ServerWorld)projectile.world;
 

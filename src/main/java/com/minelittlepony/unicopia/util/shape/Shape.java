@@ -1,43 +1,21 @@
 package com.minelittlepony.unicopia.util.shape;
 
-import net.minecraft.util.math.Vec3d;
+import java.util.stream.Stream;
+
+import net.minecraft.util.math.*;
+import net.minecraft.util.math.random.Random;
 
 /**
  *
  *Interface for a 3d shape, used for spawning particles in a designated area (or anything else you need shapes for).
  */
 public interface Shape extends PointGenerator {
-
     /**
-     * Rotates this shape around it's center.
+     * Get the volume of space filled by this shape, or the surface area if hollow.
      *
-     * @param u        Rotate yaw
-     * @param v        Rotate pitch
-     *
-     * @return This Shape
+     * @return double volume
      */
-    Shape setRotation(float u, float v);
-
-    /**
-     * X offset from the shape's origin.
-     *
-     * @return X
-     */
-    double getXOffset();
-
-    /**
-     * Y offset from the shape's origin.
-     *
-     * @return Y
-     */
-    double getYOffset();
-
-    /**
-     * Z offset from the shape's origin.
-     *
-     * @return Z
-     */
-    double getZOffset();
+    double getVolume();
 
     /**
      * Gets the lower bounds of the region occupied by this shape.
@@ -51,7 +29,41 @@ public interface Shape extends PointGenerator {
 
     /**
      * Checks if the given point is on the edge, or if not hollow the inside, of this shape.
-     * @return
      */
     boolean isPointInside(Vec3d point);
+
+    /**
+     * Returns a stream of all block positions that fit inside this shape.
+     */
+    default Stream<BlockPos> getBlockPositions() {
+        return BlockPos.stream(
+            new BlockPos(getLowerBound()),
+            new BlockPos(getUpperBound())
+        ).filter(pos -> isPointInside(Vec3d.ofCenter(pos)));
+    }
+
+    /**
+     * Returns a sequence of random points dealed out to uniformly fill this shape's area.
+     */
+    default Stream<Vec3d> randomPoints(Random rand) {
+        return randomPoints((int)getVolume(), rand);
+    }
+
+    /**
+     * Returns a new shape with after applying additional rotation.
+     */
+    @Override
+    default Shape rotate(float pitch, float yaw) {
+        return pitch == 0 && yaw == 0 ? this : new RotatedPointGenerator(this, pitch, yaw);
+    }
+
+    @Override
+    default Shape translate(Vec3i offset) {
+        return offset.equals(Vec3i.ZERO) ? this : translate(Vec3d.of(offset));
+    }
+
+    @Override
+    default Shape translate(Vec3d offset) {
+        return offset.equals(Vec3d.ZERO) ? this : new TranslatedPointGenerator(this, offset);
+    }
 }

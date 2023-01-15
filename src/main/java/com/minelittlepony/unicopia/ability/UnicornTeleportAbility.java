@@ -5,9 +5,11 @@ import com.minelittlepony.unicopia.USounds;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.ability.data.Pos;
 import com.minelittlepony.unicopia.ability.magic.Caster;
+import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
-import com.minelittlepony.unicopia.util.RayTraceHelper;
+import com.minelittlepony.unicopia.util.Trace;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.FenceBlock;
@@ -16,15 +18,10 @@ import net.minecraft.block.WallBlock;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.EntityPassengersSetS2CPacket;
 import net.minecraft.predicate.entity.EntityPredicates;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 
@@ -66,56 +63,51 @@ public class UnicornTeleportAbility implements Ability<Pos> {
 
     @Override
     public Pos tryActivate(Pony player) {
+
+        if (!player.canCast()) {
+            return null;
+        }
+
         int maxDistance = player.getMaster().isCreative() ? 1000 : 30;
-        HitResult ray = RayTraceHelper.doTrace(player.getMaster(), maxDistance, 1, EntityPredicates.CAN_COLLIDE).getResult();
 
         World w = player.getReferenceWorld();
 
-        if (ray.getType() == HitResult.Type.MISS) {
-            return null;
-        }
+        Trace trace = Trace.create(player.getMaster(), maxDistance, 1, EntityPredicates.EXCEPT_SPECTATOR);
+        return trace.getBlockOrEntityPos().map(pos -> {
+            final BlockPos originalPos = pos;
 
-        BlockPos pos;
+            boolean airAbove = enterable(w, pos.up()) && enterable(w, pos.up(2));
 
-        if (ray.getType() == HitResult.Type.ENTITY) {
-            pos = new BlockPos(ray.getPos());
-        } else {
-            pos = ((BlockHitResult)ray).getBlockPos();
-        }
+            if (exception(w, pos, player.getMaster())) {
+                final BlockPos p = pos;
+                pos = trace.getSide().map(sideHit -> {
+                    if (player.getMaster().isSneaking()) {
+                        sideHit = sideHit.getOpposite();
+                    }
 
-        boolean airAbove = enterable(w, pos.up()) && enterable(w, pos.up(2));
-
-        if (exception(w, pos, player.getMaster()) && ray.getType() == HitResult.Type.BLOCK) {
-            Direction sideHit = ((BlockHitResult)ray).getSide();
-
-            if (player.getMaster().isSneaking()) {
-                sideHit = sideHit.getOpposite();
+                    return p.offset(sideHit);
+                }).orElse(pos);
             }
-
-            pos = pos.offset(sideHit);
-        }
-
-        if (enterable(w, pos.down())) {
-            pos = pos.down();
 
             if (enterable(w, pos.down())) {
-                if (!airAbove) {
-                    return null;
+                pos = pos.down();
+
+                if (enterable(w, pos.down())) {
+                    if (!airAbove) {
+                        return null;
+                    }
+
+                    pos = originalPos.up(2);
                 }
-
-                pos = new BlockPos(
-                        ray.getPos().getX(),
-                        pos.getY() + 2,
-                        ray.getPos().getZ());
             }
-        }
 
-        if ((!enterable(w, pos) && exception(w, pos, player.getMaster()))
-         || (!enterable(w, pos.up()) && exception(w, pos.up(), player.getMaster()))) {
-            return null;
-        }
+            if ((!enterable(w, pos) && exception(w, pos, player.getMaster()))
+             || (!enterable(w, pos.up()) && exception(w, pos.up(), player.getMaster()))) {
+                return null;
+            }
 
-        return new Pos(pos.getX(), pos.getY(), pos.getZ());
+            return new Pos(pos);
+        }).orElse(null);
     }
 
     @Override
@@ -129,6 +121,10 @@ public class UnicornTeleportAbility implements Ability<Pos> {
     }
 
     protected void teleport(Pony teleporter, Caster<?> teleportee, Pos destination) {
+
+        if (!teleporter.canCast()) {
+            return;
+        }
 
         LivingEntity player = teleportee.getMaster();
 
@@ -144,10 +140,7 @@ public class UnicornTeleportAbility implements Ability<Pos> {
             Entity mount = player.getVehicle();
 
             player.stopRiding();
-
-            if (mount instanceof ServerPlayerEntity) {
-                ((ServerPlayerEntity)player).networkHandler.sendPacket(new EntityPassengersSetS2CPacket(player));
-            }
+            Living.transmitPassengers(mount);
         }
 
         Vec3d offset = teleportee.getOriginVector().subtract(teleporter.getOriginVector());

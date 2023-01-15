@@ -1,5 +1,6 @@
 package com.minelittlepony.unicopia.client;
 
+import com.minelittlepony.unicopia.block.*;
 import com.minelittlepony.unicopia.client.particle.ChangelingMagicParticle;
 import com.minelittlepony.unicopia.client.particle.CloudsEscapingParticle;
 import com.minelittlepony.unicopia.client.particle.DiskParticle;
@@ -12,40 +13,33 @@ import com.minelittlepony.unicopia.client.particle.RainbowTrailParticle;
 import com.minelittlepony.unicopia.client.particle.RaindropsParticle;
 import com.minelittlepony.unicopia.client.particle.RunesParticle;
 import com.minelittlepony.unicopia.client.particle.SphereParticle;
-import com.minelittlepony.unicopia.client.render.AccessoryFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.AmuletFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.BatWingsFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.BraceletFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.FloatingArtefactEntityRenderer;
-import com.minelittlepony.unicopia.client.render.IcarusWingsFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.WingsFeatureRenderer;
-import com.minelittlepony.unicopia.client.render.entity.ButterflyEntityRenderer;
-import com.minelittlepony.unicopia.client.render.entity.CastSpellEntityRenderer;
-import com.minelittlepony.unicopia.client.render.entity.FairyEntityRenderer;
-import com.minelittlepony.unicopia.client.render.entity.MagicBeamEntityRenderer;
-import com.minelittlepony.unicopia.client.render.entity.SpellbookEntityRenderer;
+import com.minelittlepony.unicopia.client.render.*;
+import com.minelittlepony.unicopia.client.render.entity.*;
 import com.minelittlepony.unicopia.entity.UEntities;
 import com.minelittlepony.unicopia.item.ChameleonItem;
 import com.minelittlepony.unicopia.item.GemstoneItem;
 import com.minelittlepony.unicopia.item.UItems;
 import com.minelittlepony.unicopia.particle.UParticles;
+
+import net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry;
 import net.fabricmc.fabric.api.client.particle.v1.ParticleFactoryRegistry.PendingParticleFactory;
-import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.ColorProviderRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.*;
+import net.minecraft.block.Block;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.color.block.BlockColorProvider;
+import net.minecraft.client.color.world.BiomeColors;
+import net.minecraft.client.color.world.FoliageColors;
 import net.minecraft.client.item.ModelPredicateProviderRegistry;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.SpriteProvider;
-import net.minecraft.client.render.DiffuseLighting;
-import net.minecraft.client.render.OverlayTexture;
-import net.minecraft.client.render.VertexConsumerProvider;
+import net.minecraft.client.render.*;
 import net.minecraft.client.render.entity.FlyingItemEntityRenderer;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.render.model.json.ModelTransformation;
 import net.minecraft.client.world.ClientWorld;
-import net.minecraft.item.DyeableItem;
+import net.minecraft.fluid.Fluids;
+import net.minecraft.item.*;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.util.Identifier;
 
@@ -69,6 +63,7 @@ public interface URenderers {
         AccessoryFeatureRenderer.register(WingsFeatureRenderer::new);
         AccessoryFeatureRenderer.register(IcarusWingsFeatureRenderer::new);
         AccessoryFeatureRenderer.register(BatWingsFeatureRenderer::new);
+        AccessoryFeatureRenderer.register(GlassesFeatureRenderer::new);
 
         EntityRendererRegistry.register(UEntities.THROWN_ITEM, FlyingItemEntityRenderer::new);
         EntityRendererRegistry.register(UEntities.MUFFIN, FlyingItemEntityRenderer::new);
@@ -78,6 +73,9 @@ public interface URenderers {
         EntityRendererRegistry.register(UEntities.CAST_SPELL, CastSpellEntityRenderer::new);
         EntityRendererRegistry.register(UEntities.TWITTERMITE, FairyEntityRenderer::new);
         EntityRendererRegistry.register(UEntities.SPELLBOOK, SpellbookEntityRenderer::new);
+        EntityRendererRegistry.register(UEntities.AIR_BALLOON, AirBalloonEntityRenderer::new);
+
+        BlockEntityRendererRegistry.register(UBlockEntities.WEATHER_VANE, WeatherVaneBlockEntityRenderer::new);
 
         ColorProviderRegistry.ITEM.register((stack, i) -> i > 0 ? -1 : ((DyeableItem)stack.getItem()).getColor(stack), UItems.FRIENDSHIP_BRACELET);
         BuiltinItemRendererRegistry.INSTANCE.register(UItems.FILLED_JAR, (stack, mode, matrices, vertexConsumers, light, overlay) -> {
@@ -111,12 +109,37 @@ public interface URenderers {
             matrices.push();
 
         });
+        PolearmRenderer.register(UItems.WOODEN_POLEARM);
+        PolearmRenderer.register(UItems.STONE_POLEARM);
+        PolearmRenderer.register(UItems.IRON_POLEARM);
+        PolearmRenderer.register(UItems.GOLDEN_POLEARM);
+        PolearmRenderer.register(UItems.DIAMOND_POLEARM);
+        PolearmRenderer.register(UItems.NETHERITE_POLEARM);
         ModelPredicateProviderRegistry.register(UItems.GEMSTONE, new Identifier("affinity"), (stack, world, entity, seed) -> {
             return GemstoneItem.isEnchanted(stack) ? 1 + GemstoneItem.getSpellKey(stack).getAffinity().ordinal() : 0;
         });
         ColorProviderRegistry.ITEM.register((stack, i) -> {
             return i > 0 || !GemstoneItem.isEnchanted(stack) ? -1 : GemstoneItem.getSpellKey(stack).getColor();
         }, UItems.GEMSTONE);
+
+        BlockColorProvider tintedProvider = (state, view, pos, color) -> {
+            if (view == null || pos == null) {
+                color = FoliageColors.getDefaultColor();
+            } else {
+                color = BiomeColors.getFoliageColor(view, pos);
+            }
+
+            return ((TintedBlock)state.getBlock()).getTint(state, view, pos, color);
+        };
+
+        ColorProviderRegistry.BLOCK.register(tintedProvider, TintedBlock.REGISTRY.stream().toArray(Block[]::new));
+        ColorProviderRegistry.ITEM.register((stack, i) -> {
+            return tintedProvider.getColor(Block.getBlockFromItem(stack.getItem()).getDefaultState(), null, null, i);
+        }, TintedBlock.REGISTRY.stream().map(Block::asItem).filter(i -> i != Items.AIR).toArray(Item[]::new));
+
+        BlockRenderLayerMap.INSTANCE.putBlocks(RenderLayer.getCutout(), UBlocks.TRANSLUCENT_BLOCKS.stream().toArray(Block[]::new));
+        // for lava boats
+        BlockRenderLayerMap.INSTANCE.putFluids(RenderLayer.getTranslucent(), Fluids.LAVA, Fluids.FLOWING_LAVA);
     }
 
     static <T extends ParticleEffect> PendingParticleFactory<T> createFactory(ParticleSupplier<T> supplier) {

@@ -17,12 +17,20 @@ public interface UTags {
     TagKey<Item> MAGIC_FEATHERS = item("magic_feathers");
 
     TagKey<Item> SHADES = item("shades");
+    TagKey<Item> CHANGELING_EDIBLE = item("food_types/changeling_edible");
 
+    TagKey<Item> POLEARMS = item("polearms");
+    TagKey<Item> APPLE_SEEDS = item("apple_seeds");
+
+    TagKey<Block> GLASS_PANES = block("glass_panes");
+    TagKey<Block> GLASS_BLOCKS = block("glass_blocks");
     TagKey<Block> FRAGILE = block("fragile");
     TagKey<Block> INTERESTING = block("interesting");
 
     TagKey<Block> CRYSTAL_HEART_BASE = block("crystal_heart_base");
     TagKey<Block> CRYSTAL_HEART_ORNAMENT = block("crystal_heart_ornament");
+
+    TagKey<Block> POLEARM_MINEABLE = block("mineable/polearm");
 
     TagKey<EntityType<?>> TRANSFORMABLE_ENTITIES = entity("transformable");
 

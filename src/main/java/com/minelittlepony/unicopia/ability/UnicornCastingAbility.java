@@ -2,17 +2,17 @@ package com.minelittlepony.unicopia.ability;
 
 import org.jetbrains.annotations.Nullable;
 
-import com.minelittlepony.unicopia.Race;
-import com.minelittlepony.unicopia.USounds;
+import com.minelittlepony.unicopia.*;
 import com.minelittlepony.unicopia.ability.data.Hit;
 import com.minelittlepony.unicopia.ability.magic.spell.HomingSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
+import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
 import com.minelittlepony.unicopia.client.render.PlayerPoser.Animation;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.item.AmuletItem;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
-import com.minelittlepony.unicopia.util.RayTraceHelper;
+import com.minelittlepony.unicopia.util.TraceHelper;
 import com.minelittlepony.unicopia.util.VecHelper;
 
 import net.minecraft.item.ItemStack;
@@ -22,7 +22,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.math.*;
 import net.minecraft.util.math.random.Random;
 
 /**
@@ -52,6 +52,9 @@ public class UnicornCastingAbility implements Ability<Hit> {
     @Override
     @Nullable
     public Hit tryActivate(Pony player) {
+        if (!player.canCast()) {
+            return null;
+        }
         return Hit.of(player.getMagicalReserves().getMana().get() >= getCostEstimate(player));
     }
 
@@ -77,6 +80,10 @@ public class UnicornCastingAbility implements Ability<Hit> {
 
     @Override
     public void apply(Pony player, Hit data) {
+        if (!player.canCast()) {
+            return;
+        }
+
         TypedActionResult<ItemStack> amulet = getAmulet(player);
 
         if (amulet.getResult().isAccepted()) {
@@ -98,17 +105,19 @@ public class UnicornCastingAbility implements Ability<Hit> {
             if (newSpell.getResult() != ActionResult.FAIL) {
                 CustomisedSpellType<?> spell = newSpell.getValue();
 
-                boolean remove = player.getSpellSlot().removeIf(spell, true);
-                player.subtractEnergyCost(remove ? 2 : 4);
-                if (!remove) {
+                boolean removed = player.getSpellSlot().removeWhere(s -> {
+                    return s.findMatches(spell).findAny().isPresent() && (spell.isEmpty() || !SpellType.PLACED_SPELL.test(s));
+                }, true);
+                player.subtractEnergyCost(removed ? 2 : 4);
+                if (!removed) {
                     Spell s = spell.apply(player);
                     if (s == null) {
                         player.spawnParticles(ParticleTypes.LARGE_SMOKE, 6);
                         player.playSound(USounds.SPELL_CAST_FAIL, 1, 0.5F);
                     } else {
                         player.setAnimation(Animation.ARMS_UP);
-                        if (s instanceof HomingSpell) {
-                            RayTraceHelper.doTrace(player.getMaster(), 600, 1, EntityPredicates.CAN_COLLIDE).getEntity().ifPresent(((HomingSpell)s)::setTarget);
+                        if (s instanceof HomingSpell homer) {
+                            TraceHelper.findEntity(player.getMaster(), homer.getRange(player), 1, EntityPredicates.VALID_ENTITY).ifPresent(homer::setTarget);
                         }
                         player.playSound(USounds.SPELL_CAST_SUCCESS, 0.05F, 2.2F);
                     }

@@ -54,21 +54,31 @@ public class PegasusRainboomAbility implements Ability<Hit> {
 
     @Override
     public double getCostEstimate(Pony player) {
-        return player.getMagicalReserves().getMana().getMax() * 0.9F;
+        return 90F;
+    }
+
+    @Override
+    public boolean onQuickAction(Pony player, ActivationType type) {
+
+        if (type == ActivationType.TAP && player.getPhysics().isFlying() && player.getMagicalReserves().getMana().get() > 40) {
+            player.getPhysics().dashForward((float)player.getReferenceWorld().random.nextTriangular(2.5F, 0.3F));
+            player.subtractEnergyCost(4);
+            return true;
+        }
+
+        return false;
     }
 
     @Override
     public void apply(Pony player, Hit data) {
 
-        if (!player.getMaster().isCreative() && player.getMagicalReserves().getMana().getPercentFill() < 0.2F) {
+        if (tryActivate(player) == null) {
             return;
         }
 
-        if (player.getPhysics().isFlying() && !SpellType.RAINBOOM.isOn(player)) {
-            player.getMagicalReserves().getMana().multiply(0.1F);
-            player.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, player.getPhysics().getMotionAngle()), player.getOriginVector(), Vec3d.ZERO);
-            SpellType.RAINBOOM.withTraits().apply(player);
-        }
+        player.subtractEnergyCost(9);
+        player.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, player.getPhysics().getMotionAngle()), player.getOriginVector(), Vec3d.ZERO);
+        SpellType.RAINBOOM.withTraits().apply(player);
     }
 
     @Override

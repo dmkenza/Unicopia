@@ -30,6 +30,8 @@ public class RunesParticle extends OrientedBillboardParticle implements Attachme
             Unicopia.id("textures/particles/runes_5.png")
     };
 
+    protected float targetSize = 3;
+
     protected float prevBaseSize = 0;
     protected float baseSize = 0;
 
@@ -61,23 +63,40 @@ public class RunesParticle extends OrientedBillboardParticle implements Attachme
         velocityY = 0;
         velocityZ = 0;
         Vec3d pos = link.get().map(Caster::getOriginVector).orElse(Vec3d.ZERO);
-        setPos(pos.x, pos.y, pos.z);
+        setPos(pos.x, pos.y + 0.25, pos.z);
     }
 
     @Override
     public void detach() {
         link = Optional.empty();
+        if (targetSize > 1) {
+            this.targetSize = 0;
+        }
     }
 
     @Override
-    public void setAttribute(int key, Object value) {
-        if (key == 1) {
-            int tint = (int)value;
+    public void setAttribute(int key, Number value) {
+        if (key == ATTR_COLOR) {
+            int tint = value.intValue();
             red = Color.r(tint);
             green = Color.g(tint);
             blue = Color.b(tint);
         }
+        if (key == ATTR_OPACITY) {
+            alpha = value.floatValue();
+        }
+        if (key == ATTR_RADIUS) {
+            targetSize = value.floatValue();
+        }
+        if (key == ATTR_PITCH) {
+            rotation = new Quaternion(0, 0, 0, 1);
+            rotation.hamiltonProduct(Vec3f.POSITIVE_Y.getDegreesQuaternion(value.floatValue()));
+        }
+        if (key == ATTR_YAW) {
+            rotation.hamiltonProduct(Vec3f.POSITIVE_X.getDegreesQuaternion(180 - value.floatValue()));
+        }
     }
+
     @Override
     public float getScale(float tickDelta) {
        return MathHelper.lerp(tickDelta, prevBaseSize, baseSize) * super.getScale(tickDelta);
@@ -106,31 +125,39 @@ public class RunesParticle extends OrientedBillboardParticle implements Attachme
         float angle = MathHelper.lerp(tickDelta, prevRotationAngle, rotationAngle);
 
         for (int i = 0; i < TEXTURES.length; i++) {
-            RenderSystem.setShaderTexture(0, TEXTURES[i]);
-            RenderSystem.setShaderColor(red, green, blue, alpha);
+            for (int dim = 0; dim < 3; dim++) {
+                RenderSystem.setShaderTexture(0, TEXTURES[i]);
+                RenderSystem.setShaderColor(red, green, blue, alpha / ((float)(dim * 3) + 1));
 
-            Vec3f[] corners = new Vec3f[]{
-                    new Vec3f(-1, -1, 0),
-                    new Vec3f(-1,  1, 0),
-                    new Vec3f( 1,  1, 0),
-                    new Vec3f( 1, -1, 0)
-            };
-            float scale = getScale(tickDelta);
+                Vec3f[] corners = new Vec3f[]{
+                        new Vec3f(-1, -1, 0),
+                        new Vec3f(-1,  1, 0),
+                        new Vec3f( 1,  1, 0),
+                        new Vec3f( 1, -1, 0)
+                };
+                float scale = getScale(tickDelta);
 
-            float ringSpeed = (i % 2 == 0 ? i : -1) * i;
+                float ringSpeed = (i % 2 == 0 ? i : -1) * i;
 
-            Quaternion ringAngle = Vec3f.POSITIVE_Z.getDegreesQuaternion(angle * ringSpeed);
+                Quaternion ringAngle = Vec3f.POSITIVE_Z.getDegreesQuaternion(angle * ringSpeed);
+                Quaternion ringFlip = Vec3f.POSITIVE_Y.getDegreesQuaternion(angle * ringSpeed * dim);
+                Quaternion ringRoll = Vec3f.POSITIVE_X.getDegreesQuaternion(angle * ringSpeed * dim);
 
-            for(int k = 0; k < 4; ++k) {
-               Vec3f corner = corners[k];
-               corner.rotate(ringAngle);
-               corner.rotate(rotation);
-               corner.scale(scale);
-               corner.add(x, y + 0.001F, z);
+                for(int k = 0; k < 4; ++k) {
+                   Vec3f corner = corners[k];
+                   corner.rotate(ringAngle);
+                   corner.rotate(ringFlip);
+                   corner.rotate(ringRoll);
+                   corner.rotate(rotation);
+                   corner.scale(scale);
+                   corner.add(x, y + 0.001F, z);
+                }
+
+                renderQuad(te, buffer, corners, alpha, tickDelta);
             }
-
-            renderQuad(te, buffer, corners, alpha, tickDelta);
         }
+
+        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     @Override
@@ -147,11 +174,14 @@ public class RunesParticle extends OrientedBillboardParticle implements Attachme
         }, this::detach);
 
         prevBaseSize = baseSize;
-        if (baseSize < 3) {
-            baseSize++;
+        if (baseSize < targetSize) {
+            baseSize += 0.1F;
+        }
+        if (baseSize > targetSize) {
+            baseSize -= 0.1F;
         }
 
-        prevRotationAngle = rotationAngle;
-        rotationAngle = MathHelper.wrapDegrees(rotationAngle + 0.3F);
+        rotationAngle = (rotationAngle + 0.3F) % 360;
+        prevRotationAngle = rotationAngle - 0.3F;
     }
 }

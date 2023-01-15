@@ -1,9 +1,10 @@
 {
 	"logs": [ "minecraft:oak_log", "minecraft:oak_wood" ],
 	"leaves": [ "minecraft:oak_leaves" ],
+	"rarity": 3,
 	"drops": [
 		{ "weight": 1, "item": "unicopia:rotten_apple" },
-		{ "weight": 2, "item": "unicopia:green_apple" },
-		{ "weight": 3, "item": "minecraft:apple" }
+		{ "weight": 2, "item": "unicopia:acorn" },
+		{ "weight": 3, "item": "minecraft:stick" }
 	]
 }

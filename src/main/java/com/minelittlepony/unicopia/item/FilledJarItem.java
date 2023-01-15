@@ -1,6 +1,8 @@
 package com.minelittlepony.unicopia.item;
 
 import com.minelittlepony.unicopia.entity.IItemEntity;
+import com.minelittlepony.unicopia.entity.Living;
+import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
@@ -14,12 +16,12 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.projectile.ProjectileEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
+import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.WorldEvents;
 
@@ -50,8 +52,10 @@ public class FilledJarItem extends JarItem implements ChameleonItem {
     }
 
     @Override
-    public void onImpact(ProjectileEntity projectile, Entity entity) {
-        super.onImpact(projectile, entity);
+    public void onImpact(MagicProjectileEntity projectile, EntityHitResult hit) {
+        super.onImpact(projectile, hit);
+
+        Entity entity = hit.getEntity();
 
         if (!entity.isAttackable() || !(projectile instanceof FlyingItemEntity)) {
             return;
@@ -89,12 +93,13 @@ public class FilledJarItem extends JarItem implements ChameleonItem {
 
             final float toRadians = (float)Math.PI / 180F;
 
-            if (entity instanceof LivingEntity) {
-                ((LivingEntity)entity).takeKnockback(
+            if (entity instanceof LivingEntity living) {
+                living.takeKnockback(
                         knockback / 2F,
                         MathHelper.sin(projectile.getYaw() * toRadians),
                        -MathHelper.cos(projectile.getYaw() * toRadians)
                );
+                Living.updateVelocity(living);
 
                 if (fire > 0) {
                     entity.setOnFireFor(fire * 4);
@@ -119,11 +124,8 @@ public class FilledJarItem extends JarItem implements ChameleonItem {
     }
 
     @Override
-    protected void onImpact(ProjectileEntity projectile) {
-        if (!(projectile instanceof FlyingItemEntity)) {
-            return;
-        }
-        ItemStack stack = getAppearanceStack(((FlyingItemEntity)projectile).getStack());
+    public void onImpact(MagicProjectileEntity projectile) {
+        ItemStack stack = getAppearanceStack(projectile.getStack());
         stack.damage(1, projectile.world.random, null);
         projectile.dropStack(stack);
         projectile.world.syncWorldEvent(WorldEvents.BLOCK_BROKEN, projectile.getBlockPos(), Block.getRawIdFromState(Blocks.GLASS.getDefaultState()));

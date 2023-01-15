@@ -3,7 +3,7 @@ package com.minelittlepony.unicopia.item;
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.projectile.MagicProjectileEntity;
-import com.minelittlepony.unicopia.projectile.ProjectileDelegate;
+import com.minelittlepony.unicopia.util.SoundEmitter;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.projectile.ProjectileEntity;
@@ -16,7 +16,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.world.World;
 
-abstract class ProjectileItem extends Item implements ProjectileDelegate<ProjectileEntity> {
+abstract class ProjectileItem extends Item {
 
     private final float projectileDamage;
 
@@ -34,7 +34,7 @@ abstract class ProjectileItem extends Item implements ProjectileDelegate<Project
 
         ItemStack stack = player.getStackInHand(hand);
 
-        world.playSound(null, player.getX(), player.getY(), player.getZ(),
+        SoundEmitter.playSoundAt(player,
                 getThrowSound(stack), SoundCategory.NEUTRAL,
                 0.5F,
                 0.4F / (world.random.nextFloat() * 0.4F + 0.8F));

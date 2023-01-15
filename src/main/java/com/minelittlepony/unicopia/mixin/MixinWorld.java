@@ -2,6 +2,7 @@ package com.minelittlepony.unicopia.mixin;
 
 import java.util.List;
 import java.util.Stack;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.jetbrains.annotations.Nullable;
@@ -12,9 +13,9 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import com.minelittlepony.unicopia.BlockDestructionManager;
-import com.minelittlepony.unicopia.entity.RotatedView;
-import com.minelittlepony.unicopia.entity.behaviour.EntityAppearance;
+import com.minelittlepony.unicopia.block.data.BlockDestructionManager;
+import com.minelittlepony.unicopia.entity.collision.EntityCollisions;
+import com.minelittlepony.unicopia.entity.duck.RotatedView;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.Entity;
@@ -27,10 +28,10 @@ import net.minecraft.world.WorldAccess;
 @Mixin(World.class)
 abstract class MixinWorld implements WorldAccess, BlockDestructionManager.Source, RotatedView {
 
-    private final BlockDestructionManager destructions = new BlockDestructionManager((World)(Object)this);
+    private final Supplier<BlockDestructionManager> destructions = BlockDestructionManager.create((World)(Object)this);
 
     private int recurseCount = 0;
-    private Stack<Integer> rotations = new Stack<>();
+    private final Stack<Integer> rotations = new Stack<>();
 
     @Override
     public Stack<Integer> getRotations() {
@@ -44,13 +45,13 @@ abstract class MixinWorld implements WorldAccess, BlockDestructionManager.Source
 
     @Override
     public BlockDestructionManager getDestructionManager() {
-        return destructions;
+        return destructions.get();
     }
 
     @Override
     public List<VoxelShape> getEntityCollisions(@Nullable Entity entity, Box box) {
         if (box.getAverageSideLength() >= 1.0E-7D) {
-            List<VoxelShape> shapes = EntityAppearance.getColissonShapes(entity, this, box);
+            List<VoxelShape> shapes = EntityCollisions.getColissonShapes(entity, this, box);
             if (!shapes.isEmpty()) {
                 return Stream.concat(shapes.stream(), WorldAccess.super.getEntityCollisions(entity, box).stream()).toList();
             }

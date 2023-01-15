@@ -1,8 +1,10 @@
 package com.minelittlepony.unicopia.client.gui;
 
+import com.minelittlepony.unicopia.Race;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawableHelper;
 import net.minecraft.client.render.BufferBuilder;
 import net.minecraft.client.render.BufferRenderer;
 import net.minecraft.client.render.GameRenderer;
@@ -11,17 +13,25 @@ import net.minecraft.client.render.VertexFormat;
 import net.minecraft.client.render.VertexFormats;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Matrix4f;
 
-public class DrawableUtil {
-    public static final double PI = Math.PI;
-    public static final double TAU = Math.PI * 2;
-    private static final double NUM_RINGS = 300;
-    private static final double INCREMENT = TAU / NUM_RINGS;
+public interface DrawableUtil {
+    double PI = Math.PI;
+    double TAU = Math.PI * 2;
+    double NUM_RINGS = 300;
+    double INCREMENT = TAU / NUM_RINGS;
 
+    static void drawScaledText(MatrixStack matrices, Text text, int x, int y, float size, int color) {
+        matrices.push();
+        matrices.translate(x, y, 0);
+        matrices.scale(size, size, 1);
+        MinecraftClient.getInstance().textRenderer.draw(matrices, text, 0, 0, color);
+        matrices.pop();
+    }
 
-    public static void renderItemIcon(ItemStack stack, double x, double y, float scale) {
+    static void renderItemIcon(ItemStack stack, double x, double y, float scale) {
         MatrixStack modelStack = RenderSystem.getModelViewStack();
         modelStack.push();
         modelStack.translate(x, y, 0);
@@ -36,7 +46,12 @@ public class DrawableUtil {
         RenderSystem.applyModelViewMatrix();
     }
 
-    public static void drawLine(MatrixStack matrices, int x1, int y1, int x2, int y2, int color) {
+    static void renderRaceIcon(MatrixStack matrices, Race race, int x, int y, int size) {
+        RenderSystem.setShaderTexture(0, race.getIcon());
+        DrawableHelper.drawTexture(matrices, x - size / 2, y - size / 2, 0, 0, 0, size, size, size, size);
+    }
+
+    static void drawLine(MatrixStack matrices, int x1, int y1, int x2, int y2, int color) {
         RenderSystem.enableBlend();
         RenderSystem.disableTexture();
         RenderSystem.defaultBlendFunc();
@@ -56,7 +71,7 @@ public class DrawableUtil {
         bufferBuilder.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
         bufferBuilder.vertex(matrix, x1, y1, 0).color(r, g, b, k).next();
         bufferBuilder.vertex(matrix, x2, y2, 0).color(r, g, b, k).next();
-        BufferRenderer.drawWithoutShader(bufferBuilder.end());
+        BufferRenderer.drawWithShader(bufferBuilder.end());
         RenderSystem.enableTexture();
         RenderSystem.disableBlend();
     }
@@ -66,7 +81,7 @@ public class DrawableUtil {
      *
      * @param mirrorHorizontally Whether or not the arc must be mirrored across the horizontal plane. Will produce a bar that grows from the middle filling both sides.
      */
-    public static void drawArc(MatrixStack matrices, double innerRadius, double outerRadius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
+    static void drawArc(MatrixStack matrices, double innerRadius, double outerRadius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
         float r = (color >> 24 & 255) / 255F;
         float g = (color >> 16 & 255) / 255F;
         float b = (color >> 8 & 255) / 255F;
@@ -113,7 +128,7 @@ public class DrawableUtil {
      *
      * @param mirrorHorizontally Whether or not the arc must be mirrored across the horizontal plane. Will produce a bar that grows from the middle filling both sides.
      */
-    public static void drawArc(MatrixStack matrices, double radius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
+    static void drawArc(MatrixStack matrices, double radius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
         drawCircle(matrices, radius, startAngle, arcAngle, color, mirrorHorizontally, VertexFormat.DrawMode.DEBUG_LINES);
     }
 
@@ -122,7 +137,7 @@ public class DrawableUtil {
      *
      * @param mirrorHorizontally Whether or not the arc must be mirrored across the horizontal plane. Will produce a bar that grows from the middle filling both sides.
      */
-    public static void drawCircle(MatrixStack matrices, double radius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
+    static void drawCircle(MatrixStack matrices, double radius, double startAngle, double arcAngle, int color, boolean mirrorHorizontally) {
         drawCircle(matrices, radius, startAngle, arcAngle, color, mirrorHorizontally, VertexFormat.DrawMode.QUADS);
     }
 

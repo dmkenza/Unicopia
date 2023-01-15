@@ -21,24 +21,27 @@ public class MagicalDamageSource extends EntityDamageSource {
     public static final DamageSource FOOD_POISONING = mundane("food_poisoning");
     public static final DamageSource TRIBE_SWAP = mundane("tribe_swap");
     public static final DamageSource ZAP_APPLE = create("zap");
+    public static final DamageSource KICK = create("kick");
 
     public static DamageSource mundane(String type) {
         return new DamageSource(type) {};
     }
 
-    public static DamageSource create(String type) {
+    public static MagicalDamageSource create(String type) {
         return new MagicalDamageSource(type, null, null, false, false);
     }
 
-    public static DamageSource create(String type, @Nullable LivingEntity source) {
+    public static MagicalDamageSource create(String type, @Nullable LivingEntity source) {
         return new MagicalDamageSource(type, source, null, false, false);
     }
 
-    public static DamageSource create(String type, Caster<?> caster) {
+    public static MagicalDamageSource create(String type, Caster<?> caster) {
         return new MagicalDamageSource(type, caster.getMaster(), caster.getEntity(), false, false);
     }
 
     private Entity spell;
+
+    private boolean breakSunglasses;
 
     protected MagicalDamageSource(String type, @Nullable Entity spell, boolean direct, boolean unblockable) {
         this(type, null, spell, direct, unblockable);
@@ -54,6 +57,15 @@ public class MagicalDamageSource extends EntityDamageSource {
         if (unblockable) {
             setUnblockable();
         }
+    }
+
+    public MagicalDamageSource setBreakSunglasses() {
+        breakSunglasses = true;
+        return this;
+    }
+
+    public boolean breaksSunglasses() {
+        return breakSunglasses;
     }
 
     @Nullable

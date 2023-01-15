@@ -1,0 +1,320 @@
+{
+  "side": "RIGHT",
+  "y_position": 5,
+  "color": 0,
+  "content": {
+    "pages": [
+      {
+        "title": "Ch.5 The Arcane",
+        "level": 10,
+        "elements": [
+          { "x": 15, "y": 0, "width": 128, "height": 128, "texture": "unicopia:textures/gui/container/pages/dark_magic.png" }
+        ]
+      },
+      {
+        "title": "30th Hoof '12",
+        "level": 8,
+        "elements": [
+          "A new communication from the crown today. The situation seems to be worsening in the west and though they've been satisfied with my work until now, they are putting pressure on me to produce something more destructive.",
+          "I tried to tell the messenger that I couldn't-"
+        ]
+      },
+      {
+        "title": "",
+        "level": 0,
+        "elements": []
+      },
+      {
+        "title": "3rd Slep '12",
+        "level": 9,
+        "elements": [
+          "Let it be known that it was never my intention that anypony use my work for nefarious purposes. I am a researcher, above and beyond all else. My intentions are pure, and my wants are nothing more than this world to be at peace"
+        ]
+      },
+      {
+        "title": "",
+        "level": 0,
+        "elements": []
+      },
+      {
+        "title": "4th Slep 12",
+        "level": 10,
+        "elements": [
+          "No review of magic is ever complete without a glimpse into the other side.",
+          "Dark magic, or as I'm going to refer to it as The Arcane are tip-toeing the line between the normal light magic we normally know and the more nefarious side of reality.",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "Attraction",
+        "level": 5,
+        "elements": [
+          "If someone were to ask you 'what is the opposite of a repulsion spell, what would you say? An attraction spell, of course!",
+          "By twisting the purpose of the protection spell, I've been able to reverse its function to create a spell that pulls objects and entities closer to the caster.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/trait/air.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/knowledge.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 5,
+        "elements": [
+          { "recipe": "unicopia:spells/vortex" },
+          "Requires:",
+          "- 1 protection gem\n- At least 10x strength trait\n- At least 8x knowledge trait\n- At least 9x air trait",
+          "+ 10x knowledge to narrow the effect's range to items\n+ Add focus trait to increase duration\n+ add power trait to increase range"
+        ]
+      },
+      {
+        "title": "8th Slep '12",
+        "level": 6,
+        "elements": [
+          "Additional Notes for the Attraction Spell",
+          "I caught Luna playing with my spellcrafting grid today, even though I expressly forbid her from entering my study when I'm not there.",
+          "Apparently it was over some dispute with Celly, I don't really remember, but it culminated in Luna sneaking into the study whilst I was out to get some bread."
+        ]
+      },
+      {
+        "title": "Arcane Attraction II",
+        "level": 6,
+        "elements": [
+          "This isn't really about that, though. She's been scolded and sent back to her room, however as I was cleaning up the mess she'd made I noticed something in the piles of gems.",
+          "It's hard to describe, really. This is still distincly an attraction gem, but it's different.",
+          "It has traits I hadn't considered before, and the way it behaves... "
+        ]
+      },
+      {
+        "title": "Arcane Attraction II Cont.",
+        "level": 6,
+        "elements": [
+          "Well I'll leave that up to tomorrow. I'm still tired from everything that's happened this week.",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "",
+        "level": 6,
+        "elements": [
+          ">0 generosity --> ??",
+          ">20 order trait --> ???"
+        ]
+      },
+      {
+        "title": "20th Slep '12",
+        "level": 11,
+        "elements": [
+          "As per their agreement, the council have sent certain...supplimental materials to aid in the new direction my research is taking. I was a little shocked at first.",
+          "This... thing... Whatever it is. Was, rather.",
+          "Is this really what we're fighting in the west?",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "21st Slep '12",
+        "level": 11,
+        "elements": [
+          "I've put the... thing. In the basement. Locked the door.",
+          "I just couldn't stand looking at it any longer. It's vaguely pony-shaped, but also...",
+          "I couldn't well let Luna see it. I've sent her out to spend the next few nights with Celly whilst I sort out what to do with this.",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "",
+        "level": -1,
+        "elements": []
+      },
+      {
+        "title": "",
+        "level": -1,
+        "elements": []
+      },
+      {
+        "title": "25th Slep '12",
+        "level": 13,
+        "elements": [
+          "I'm sorry for the long delays. Things have been... Busy.",
+          "I've learned a lot about these creatures. Attached are some illustrations, done best I could so I wouldn't have to look at the thing directly.",
+          {
+            "text": "Its body is black and vaguely",
+            "extra": [
+              { "text": "insect-like", "obfuscated": true },
+              "with ponish proportions. It has no fur."
+            ]
+          }
+        ]
+      },
+      {
+        "title": "",
+        "level": 14,
+        "elements": [
+          "The magic they use is unusual. Not unusual, like what I've been studying. It's unnatural. Wild.",
+          "There is definitely something I might be able to harness here, but I shudder... Should I?",
+          "I fear that this may be a line that shouldn't be crossed.",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "Transmutation",
+        "level": 13,
+        "elements": [
+          "I've begun by simply harnessing their ability. It's unfocused and hard to control. I can rarely predict what is going to happen, but this gem has very clear transmodrification properties.",
+          "Throwing this at any creature has the chance to transform it into any other creature.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/trait/life.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/chaos.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 13,
+        "elements": [
+          { "recipe": "unicopia:spells/transformation" },
+          "Requires:",
+          "- At least 18x knowledge trait\n- At least 10x life trait\n- At least 4x chaos trait"
+        ]
+      },
+      {
+        "title": "Dispell Illusion",
+        "level": 15,
+        "elements": [
+          "Dispell Illusion is the first line of defense against transformation/illusion spells.",
+          "When cast it will force any nearby disguised changelings in its range to reveal their true form.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/trait/knowledge.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/chaos.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 15,
+        "elements": [
+          { "recipe": "unicopia:spells/reveal" },
+          "Requires:",
+          "- A protection gem\n- At least 18x knowledge trait\n- At least 1x life trait\n- At least 4x harmony trait",
+          "* Increase range by adding the power trait"
+        ]
+      },
+      {
+        "title": "27th Slep '12",
+        "level": 14,
+        "elements": [
+          "Sleep the last few nights has become... elusive.",
+          "I don't know how to describe it, really. Luna appears unaffected, but every night after the sun goes down I find myself lying awake at night unable to sleep. It doesn't help that that sounds in the village have resumed."
+        ]
+      },
+      {
+        "title": "Lost Sleep",
+        "level": 15,
+        "elements": [
+          "Last night, especially, I found myself pacing in the observatory. The air became chill, more than is normal for this time of year, and beyond anything that raging fire in corner of the room could combat.",
+          "The room where I keep the--my patient opposite the wall behind me."
+        ]
+      },
+      {
+        "title": "Lost Sleep Cont.",
+        "level": 15,
+        "elements": [
+          "I've long since taken to keeping that door locked because every so often I could swear I heard something moving in there...",
+          "Gods, am I going crazy?",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "",
+        "level": -1,
+        "elements": []
+      },
+      {
+        "title": "29th Slep '12",
+        "level": 18,
+        "elements": [
+          "Bits, there it is again!",
+          "I thought last night was a fluke, but I just heard it again--I'm shaking. My hooves, I can barely hold this book as I struggle to pen these words.",
+          "There's something--I heard something. Like a chittering--",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "1st Croptober '12",
+        "level": 14,
+        "elements": [
+          "I made a call into town. One of the local blacksmiths have agreed to install a new lock, one of the heavy kind that not even earth ponies can bust.",
+          "I fear it may not be enough, though, it--whatever it is, clearly has magic. I may be forced to research a magical solution to my insomnia.",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "Arcane Protection",
+        "level": 16,
+        "elements": [
+          "This spell will create a magical shroud that can be used to protect from other spellcasters.",
+          "No one else will be able to use magic within its radius.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/trait/knowledge.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/darkness.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 16,
+        "elements": [
+          { "recipe": "unicopia:spells/arcane_protection" },
+          "Requires:",
+          "- A protection gem\n- At least 10x strength trait\n- At least 18x knowledge trait\n- At least 1x darkness trait",
+          "* Increase range by adding the power trait"
+        ]
+      },
+      {
+        "title": "Displacement",
+        "level": 17,
+        "elements": [
+          "By casting this spell, a unicorn is able to swap their location with any other creature.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/trait/knowledge.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/chaos.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 17,
+        "elements": [
+          { "recipe": "unicopia:spells/displacement" },
+          "Requires:",
+          "- 1 gemstone\n- At least 18x knowledge trait\n- At least 10x chaos trait"
+        ]
+      },
+      {
+        "title": "3rd Croptober '12",
+        "level": 14,
+        "elements": [
+          "The locks have been installed, and with the addition of some extra wardings, I'm feeling a little more at ease.",
+          "The motions at night have all but stopped, though I feel like I can almost hear it at times...",
+          "- Starswirl the Bearded"
+        ]
+      },
+      {
+        "title": "4th Cropt-",
+        "level": 15,
+        "elements": [
+          ""
+        ]
+      },
+      {
+        "title": "Mimic",
+        "level": 17,
+        "elements": [
+          "I've been able to tap into some of this strange creature's abilities. There's still a lot to figure out here, but for now I've merely distilled its essense into a gem.",
+          { "x": 125, "y": -20, "width": 32, "height": 32, "texture": "unicopia:textures/gui/container/pages/dark_magic.png" },
+          { "x": 125, "y": -20, "width": 16, "height": 16, "texture": "unicopia:textures/gui/trait/darkness.png" }
+        ]
+      },
+      {
+        "title": "",
+        "level": 18,
+        "elements": [
+          { "recipe": "unicopia:spells/mimic" },
+          "Requires:",
+          "- A transmutation gem\nAt least 19x knowledge trait\n- At least 10x life trait\n- At least 4x chaos trait",
+          "* Add the focus trait to increase the effect's duration"
+        ]
+      }
+    ]
+  }
+}

@@ -2,6 +2,7 @@ package com.minelittlepony.unicopia.projectile;
 
 import org.jetbrains.annotations.Nullable;
 
+import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.mixin.MixinPersistentProjectileEntity;
 
 import net.minecraft.entity.Entity;
@@ -21,7 +22,7 @@ public interface ProjectileUtil {
      * Checks if the given entity is a projectile that is not stuck in the ground.
      */
     static boolean isFlyingProjectile(Entity e) {
-        return isProjectile(e) && !(e instanceof MixinPersistentProjectileEntity && ((MixinPersistentProjectileEntity)e).isInGround());
+        return isProjectile(e) && !(e instanceof MixinPersistentProjectileEntity m && m.isInGround());
     }
 
     /**
@@ -42,14 +43,15 @@ public interface ProjectileUtil {
      */
     static void setThrowableHeading(Entity throwable, Vec3d heading, float velocity, float inaccuracy) {
 
-        if (throwable instanceof ProjectileEntity) {
-            ((ProjectileEntity)throwable).setVelocity(heading.x, heading.y, heading.z, velocity, inaccuracy);
+        if (throwable instanceof ProjectileEntity p) {
+            p.setVelocity(heading.x, heading.y, heading.z, velocity, inaccuracy);
         } else {
             heading = heading.normalize().multiply(velocity);
 
             Vec3d vel = throwable.getVelocity();
 
             throwable.addVelocity(heading.x - vel.x, heading.y - vel.y, heading.z - vel.z);
+            Living.updateVelocity(throwable);
         }
     }
 

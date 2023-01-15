@@ -1,23 +1,27 @@
 package com.minelittlepony.unicopia.network.handler;
 
+import java.util.Map;
+
 import com.minelittlepony.unicopia.InteractionManager;
 import com.minelittlepony.unicopia.Owned;
 import com.minelittlepony.unicopia.USounds;
+import com.minelittlepony.unicopia.ability.data.tree.TreeTypes;
+import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.client.ClientBlockDestructionManager;
 import com.minelittlepony.unicopia.client.DiscoveryToast;
 import com.minelittlepony.unicopia.client.gui.TribeSelectionScreen;
+import com.minelittlepony.unicopia.client.gui.spellbook.ClientChapters;
+import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookChapterList.Chapter;
 import com.minelittlepony.unicopia.entity.UEntities;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import com.minelittlepony.unicopia.network.MsgBlockDestruction;
-import com.minelittlepony.unicopia.network.MsgCancelPlayerAbility;
-import com.minelittlepony.unicopia.network.MsgSpawnProjectile;
-import com.minelittlepony.unicopia.network.MsgTribeSelect;
-import com.minelittlepony.unicopia.network.MsgUnlockTraits;
+import com.minelittlepony.unicopia.network.*;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.entity.Entity;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.util.Identifier;
 
 public class ClientNetworkHandlerImpl implements ClientNetworkHandler {
 
@@ -73,5 +77,18 @@ public class ClientNetworkHandlerImpl implements ClientNetworkHandler {
         for (Trait trait : packet.traits) {
             DiscoveryToast.show(client.getToastManager(), trait.getSprite());
         }
+    }
+
+    @Override
+    public Map<Identifier, ?> readChapters(PacketByteBuf buffer) {
+        return  buffer.readMap(PacketByteBuf::readIdentifier, ClientChapters::loadChapter);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void handleServerResources(MsgServerResources packet) {
+        SpellTraits.load(packet.traits);
+        ClientChapters.load((Map<Identifier, Chapter>)packet.chapters);
+        TreeTypes.load(packet.treeTypes);
     }
 }

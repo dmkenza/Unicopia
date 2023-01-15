@@ -2,13 +2,12 @@ package com.minelittlepony.unicopia.ability;
 
 import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.ability.data.Hit;
+import com.minelittlepony.unicopia.entity.Living;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import com.minelittlepony.unicopia.util.RayTraceHelper;
+import com.minelittlepony.unicopia.util.TraceHelper;
 
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.EntityPassengersSetS2CPacket;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.world.World;
 
 /**
@@ -18,7 +17,7 @@ public class CarryAbility implements Ability<Hit> {
 
     @Override
     public int getWarmupTime(Pony player) {
-        return 0;
+        return 5;
     }
 
     @Override
@@ -42,7 +41,7 @@ public class CarryAbility implements Ability<Hit> {
     }
 
     protected LivingEntity findRider(PlayerEntity player, World w) {
-        return RayTraceHelper.<LivingEntity>findEntity(player, 10, 1, hit -> {
+        return TraceHelper.<LivingEntity>findEntity(player, 10, 1, hit -> {
             return hit instanceof LivingEntity && !player.isConnectedThroughVehicle(hit) && !(hit instanceof IPickupImmuned);
         }).orElse(null);
     }
@@ -50,6 +49,17 @@ public class CarryAbility implements Ability<Hit> {
     @Override
     public Hit.Serializer<Hit> getSerializer() {
         return Hit.SERIALIZER;
+    }
+
+    @Override
+    public boolean onQuickAction(Pony player, ActivationType type) {
+
+        if (type == ActivationType.TAP && player.getPhysics().isFlying()) {
+            player.getPhysics().dashForward((float)player.getReferenceWorld().random.nextTriangular(1, 0.3F));
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -65,9 +75,7 @@ public class CarryAbility implements Ability<Hit> {
             rider.startRiding(player, true);
         }
 
-        if (player instanceof ServerPlayerEntity) {
-            ((ServerPlayerEntity)player).networkHandler.sendPacket(new EntityPassengersSetS2CPacket(player));
-        }
+        Living.transmitPassengers(player);
     }
 
     @Override

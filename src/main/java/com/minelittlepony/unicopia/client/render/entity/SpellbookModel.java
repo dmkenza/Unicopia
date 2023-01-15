@@ -16,6 +16,7 @@ public class SpellbookModel extends EntityModel<SpellbookEntity> {
 
     public SpellbookModel(ModelPart root) {
         book = new BookModel(root);
+        root.getChild("seam").pivotX -= 0.01F;
     }
 
     public static TexturedModelData getTexturedModelData() {
@@ -25,11 +26,6 @@ public class SpellbookModel extends EntityModel<SpellbookEntity> {
     @Override
     public void render(MatrixStack matrices, VertexConsumer vertexConsumer, int light, int overlay, float red, float green, float blue, float alpha) {
        book.render(matrices, vertexConsumer, light, overlay, red, green, blue, alpha);
-    }
-
-    @Deprecated
-    public void setPageAngles(float breath, float leftPageRot, float rightPageRot, float openAngle) {
-       book.setPageAngles(breath, leftPageRot, rightPageRot, openAngle);
     }
 
     @Override

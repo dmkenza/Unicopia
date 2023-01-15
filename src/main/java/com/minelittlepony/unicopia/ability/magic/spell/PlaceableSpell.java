@@ -1,22 +1,21 @@
 package com.minelittlepony.unicopia.ability.magic.spell;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import org.jetbrains.annotations.Nullable;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
-import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
+import com.minelittlepony.unicopia.ability.magic.spell.effect.CustomisedSpellType;
+import com.minelittlepony.unicopia.block.data.Ether;
 import com.minelittlepony.unicopia.entity.CastSpellEntity;
 import com.minelittlepony.unicopia.entity.EntityReference;
 import com.minelittlepony.unicopia.entity.UEntities;
 import com.minelittlepony.unicopia.particle.OrientedBillboardParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleHandle;
 import com.minelittlepony.unicopia.particle.UParticles;
+import com.minelittlepony.unicopia.particle.ParticleHandle.Attachment;
 
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.*;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.registry.Registry;
@@ -29,7 +28,7 @@ import net.minecraft.world.World;
  * The spell's effects are still powered by the casting player, so if the player dies or leaves the area, their
  * spell loses affect until they return.
  */
-public class PlaceableSpell extends AbstractDelegatingSpell {
+public class PlaceableSpell extends AbstractDelegatingSpell implements OrientedSpell {
     /**
      * Dimension the spell was originally cast in
      */
@@ -51,8 +50,11 @@ public class PlaceableSpell extends AbstractDelegatingSpell {
      */
     private Spell spell;
 
-    public PlaceableSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    public float pitch;
+    public float yaw;
+
+    public PlaceableSpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     public PlaceableSpell setSpell(Spell spell) {
@@ -73,6 +75,7 @@ public class PlaceableSpell extends AbstractDelegatingSpell {
 
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
+
         if (situation == Situation.BODY) {
             if (!source.isClient()) {
 
@@ -81,27 +84,27 @@ public class PlaceableSpell extends AbstractDelegatingSpell {
                     setDirty();
                 }
 
-                if (getSpellEntity(source).isEmpty()) {
-                    CastSpellEntity entity = UEntities.CAST_SPELL.create(source.getReferenceWorld());
-                    Vec3d pos = castEntity.getPosition().orElse(source.getOriginVector());
-                    entity.updatePositionAndAngles(pos.x, pos.y, pos.z, 0, 0);
-                    entity.getSpellSlot().put(spell.toPlaceable());
-                    entity.setMaster(source);
-                    entity.world.spawnEntity(entity);
-
-                    castEntity.set(entity);
-                    setDirty();
-                }
+                castEntity.getId().ifPresentOrElse(
+                        id -> checkDetachment(source, id),
+                        () -> spawnPlacedEntity(source)
+                );
             }
 
             return !isDead();
         }
 
         if (situation == Situation.GROUND_ENTITY) {
-            particlEffect.update(getUuid(), source, spawner -> {
-                spawner.addParticle(new OrientedBillboardParticleEffect(UParticles.MAGIC_RUNES, 90, 0), source.getOriginVector(), Vec3d.ZERO);
-            }).ifPresent(p -> {
-                p.setAttribute(1, spell.getType().getColor());
+            if (!source.isClient() && Ether.get(source.getReferenceWorld()).getEntry(getType(), source).isEmpty()) {
+                setDead();
+                return false;
+            }
+
+            if (spell instanceof PlacementDelegate delegate) {
+                delegate.updatePlacement(source, this);
+            }
+
+            getParticleEffectAttachment(source).ifPresent(p -> {
+                p.setAttribute(Attachment.ATTR_COLOR, spell.getType().getColor());
             });
 
             return super.tick(source, Situation.GROUND);
@@ -110,37 +113,95 @@ public class PlaceableSpell extends AbstractDelegatingSpell {
         return !isDead();
     }
 
+    private void checkDetachment(Caster<?> source, UUID id) {
+        if (getWorld(source).map(Ether::get).flatMap(ether -> ether.getEntry(getType(), id)).isEmpty()) {
+            setDead();
+        }
+    }
+
+    private void spawnPlacedEntity(Caster<?> source) {
+        CastSpellEntity entity = UEntities.CAST_SPELL.create(source.getReferenceWorld());
+        Vec3d pos = castEntity.getPosition().orElse(source.getOriginVector());
+        entity.updatePositionAndAngles(pos.x, pos.y, pos.z, source.getEntity().getYaw(), source.getEntity().getPitch());
+        PlaceableSpell copy = spell.toPlaceable();
+        if (spell instanceof PlacementDelegate delegate) {
+            delegate.onPlaced(source, copy, entity);
+        }
+        entity.getSpellSlot().put(copy);
+        entity.setCaster(source);
+        entity.world.spawnEntity(entity);
+        Ether.get(entity.world).put(getType(), entity);
+
+        castEntity.set(entity);
+        setDirty();
+    }
+
+    @Override
+    public void setOrientation(float pitch, float yaw) {
+        this.pitch = -90 - pitch;
+        this.yaw = -yaw;
+        getDelegates(spell -> spell instanceof OrientedSpell o ? o : null)
+            .forEach(oriented -> oriented.setOrientation(pitch, yaw));
+        setDirty();
+    }
+
     @Override
     public void onDestroyed(Caster<?> source) {
         if (!source.isClient()) {
+            castEntity.getId().ifPresent(id -> {
+                getWorld(source).map(Ether::get)
+                    .flatMap(ether -> ether.getEntry(getType(), id))
+                    .ifPresent(Ether.Entry::markDead);
+            });
+            castEntity.set(null);
             getSpellEntity(source).ifPresent(e -> {
-                e.getSpellSlot().clear();
                 castEntity.set(null);
             });
+
+            if (source.getEntity() instanceof CastSpellEntity spellcast) {
+                Ether.get(source.getReferenceWorld()).remove(getType(), source);
+            }
         }
         super.onDestroyed(source);
     }
 
-    protected Optional<CastSpellEntity> getSpellEntity(Caster<?> source) {
+    public Optional<CastSpellEntity> getSpellEntity(Caster<?> source) {
+        return getWorld(source).map(castEntity::get);
+    }
+
+    public Optional<Vec3d> getPosition() {
+        return castEntity.getPosition();
+    }
+
+    public Optional<Attachment> getParticleEffectAttachment(Caster<?> source) {
+        return particlEffect.update(getUuid(), source, spawner -> {
+            spawner.addParticle(new OrientedBillboardParticleEffect(UParticles.MAGIC_RUNES, pitch + 90, yaw), Vec3d.ZERO, Vec3d.ZERO);
+        });
+    }
+
+    protected Optional<World> getWorld(Caster<?> source) {
         return Optional.ofNullable(dimension)
-                .map(dim -> source.getReferenceWorld().getServer().getWorld(dimension))
-                .map(castEntity::get);
+                .map(dim -> source.getReferenceWorld().getServer().getWorld(dim));
     }
 
     @Override
     public void toNBT(NbtCompound compound) {
         super.toNBT(compound);
+        compound.putFloat("pitch", pitch);
+        compound.putFloat("yaw", yaw);
         if (dimension != null) {
             compound.putString("dimension", dimension.getValue().toString());
         }
         compound.put("castEntity", castEntity.toNBT());
-        compound.put("spell", Spell.writeNbt(spell));
+
     }
 
     @Override
     public void fromNBT(NbtCompound compound) {
         super.fromNBT(compound);
-        if (compound.contains("dimension")) {
+        pitch = compound.getFloat("pitch");
+        yaw = compound.getFloat("yaw");
+        if (compound.contains("dimension", NbtElement.STRING_TYPE)) {
             Identifier id = Identifier.tryParse(compound.getString("dimension"));
             if (id != null) {
                 dimension = RegistryKey.of(Registry.WORLD_KEY, id);
@@ -149,11 +210,28 @@ public class PlaceableSpell extends AbstractDelegatingSpell {
         if (compound.contains("castEntity")) {
             castEntity.fromNBT(compound.getCompound("castEntity"));
         }
-        spell = Spell.readNbt(compound.getCompound("spell"));
+    }
+
+    @Override
+    protected void loadDelegates(NbtCompound compound) {
+        spell = Spell.SERIALIZER.read(compound.getCompound("spell"));
+    }
+
+    @Override
+    protected void saveDelegates(NbtCompound compound) {
+        compound.put("spell", Spell.SERIALIZER.write(spell));
+
     }
 
     @Override
     public PlaceableSpell toPlaceable() {
         return this;
+    }
+
+    public interface PlacementDelegate {
+
+        void onPlaced(Caster<?> source, PlaceableSpell parent, CastSpellEntity entity);
+
+        void updatePlacement(Caster<?> source, PlaceableSpell parent);
     }
 }

@@ -1,9 +1,11 @@
 package com.minelittlepony.unicopia.client.gui;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
+import com.minelittlepony.unicopia.Unicopia;
+import com.minelittlepony.unicopia.ability.magic.spell.trait.*;
+import com.minelittlepony.unicopia.entity.player.Pony;
 import com.mojang.blaze3d.systems.RenderSystem;
 
 import net.minecraft.client.MinecraftClient;
@@ -14,9 +16,13 @@ import net.minecraft.client.render.Tessellator;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.item.ItemRenderer;
 import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.*;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.MathHelper;
 
 public class ItemTraitsTooltipRenderer implements Text, OrderedText, TooltipComponent {
+    private static final Identifier UNKNOWN = Unicopia.id("textures/gui/trait/unknown.png");
 
     private final SpellTraits traits;
 
@@ -26,7 +32,7 @@ public class ItemTraitsTooltipRenderer implements Text, OrderedText, TooltipComp
 
     @Override
     public int getHeight() {
-        return getRows() * 16 + 4;
+        return getRows() * 17 + 2;
     }
 
     @Override
@@ -35,11 +41,15 @@ public class ItemTraitsTooltipRenderer implements Text, OrderedText, TooltipComp
     }
 
     private int getColumns() {
-        return Math.max(4, (int)Math.ceil(Math.sqrt(traits.entries().size() + 1)));
+        return Math.min(traits.entries().size(), Math.max(6, (int)Math.ceil(Math.sqrt(traits.entries().size() + 1))));
     }
 
     private int getRows() {
-        return Math.max(1, (int)Math.ceil((traits.entries().size() + 1) / getColumns()));
+        int columns = getColumns();
+        if (columns == traits.entries().size()) {
+            return 1;
+        }
+        return Math.max(1, (int)Math.ceil((float)(traits.entries().size() + 1) / getColumns()));
     }
 
     @Override
@@ -50,7 +60,7 @@ public class ItemTraitsTooltipRenderer implements Text, OrderedText, TooltipComp
         for (var entry : traits) {
             renderTraitIcon(entry.getKey(), entry.getValue(), matrices,
                     x + (i % columns) * 17,
-                    y + (i / columns) * 16
+                    y + (i / columns) * 17
             );
             i++;
         }
@@ -71,39 +81,69 @@ public class ItemTraitsTooltipRenderer implements Text, OrderedText, TooltipComp
         return Text.empty();
     }
 
-    public static void renderTraitIcon(Trait trait, float value, MatrixStack matrices, int xx, int yy) {
+    public static void renderStackTraits(ItemStack stack, MatrixStack matrices, float x, float y, float weight, float delta, int seed) {
+        renderStackTraits(SpellTraits.of(stack), matrices, x, y, weight, delta, seed);
+    }
+
+    public static void renderStackTraits(SpellTraits traits, MatrixStack matrices, float x, float y, float weight, float delta, int seed) {
+        float time = MathHelper.cos((MinecraftClient.getInstance().player.age + delta + seed) / 2F) * 0.7F;
+
+        float angle = 0.7F + (time / 30F) % MathHelper.TAU;
+        float angleIncrement = MathHelper.TAU / traits.entries().size();
+        float r = 9 + 2 * MathHelper.sin(delta / 20F);
+
+        for (var entry : traits) {
+            if (isKnown(entry.getKey())) {
+                ItemTraitsTooltipRenderer.renderTraitIcon(entry.getKey(), entry.getValue() * weight, matrices,
+                        x + r * MathHelper.sin(angle),
+                        y + r * MathHelper.cos(angle)
+                );
+                angle += angleIncrement;
+            }
+        }
+    }
+
+    public static boolean isKnown(Trait trait) {
+        return MinecraftClient.getInstance().player == null
+            || Pony.of(MinecraftClient.getInstance().player).getDiscoveries().isKnown(trait);
+    }
+
+    public static void renderTraitIcon(Trait trait, float value, MatrixStack matrices, float xx, float yy) {
         TextRenderer textRenderer = MinecraftClient.getInstance().textRenderer;
         ItemRenderer itemRenderer = MinecraftClient.getInstance().getItemRenderer();
 
         int size = 12;
 
-        RenderSystem.setShaderTexture(0, trait.getSprite());
-        DrawableHelper.drawTexture(matrices, xx + 2, yy + 1, 0, 0, 0, size, size, size, size);
+        RenderSystem.setShaderTexture(0, isKnown(trait) ? trait.getSprite() : UNKNOWN);
 
         matrices.push();
-        matrices.translate(xx + 9, yy + 3 + size / 2, itemRenderer.zOffset + 200.0F);
+        matrices.translate(xx, yy, itemRenderer.zOffset + 300.0F);
+
+        DrawableHelper.drawTexture(matrices, 2, 1, 0, 0, 0, size, size, size, size);
+
+        matrices.translate(9, 3 + size / 2, 0);
         matrices.scale(0.5F, 0.5F, 1);
+
+        String count = value > 99 ? "99+" : Math.round(value) == value ? (int)value + "" : ((Math.round(value * 10) / 10F) + "");
+
         VertexConsumerProvider.Immediate immediate = VertexConsumerProvider.immediate(Tessellator.getInstance().getBuffer());
-        textRenderer.draw(value > 99 ? "99+" : Math.round(value) + "", 0, 0, 16777215, true, matrices.peek().getPositionMatrix(), immediate, false, 0, 15728880);
+        textRenderer.draw(count, 0, 0, 16777215, true, matrices.peek().getPositionMatrix(), immediate, false, 0, 15728880);
         immediate.draw();
         matrices.pop();
     }
 
     @Override
     public Style getStyle() {
-        // TODO Auto-generated method stub
-        return null;
+        return Text.empty().getStyle();
     }
 
     @Override
     public TextContent getContent() {
-        // TODO Auto-generated method stub
-        return null;
+        return Text.empty().getContent();
     }
 
     @Override
     public List<Text> getSiblings() {
-        // TODO Auto-generated method stub
-        return null;
+        return new ArrayList<>();
     }
 }

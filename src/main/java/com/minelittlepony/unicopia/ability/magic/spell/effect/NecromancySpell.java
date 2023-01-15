@@ -1,12 +1,11 @@
 package com.minelittlepony.unicopia.ability.magic.spell.effect;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.function.Supplier;
 
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.AbstractAreaEffectSpell;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
 import com.minelittlepony.unicopia.entity.Creature;
 import com.minelittlepony.unicopia.entity.EntityReference;
@@ -33,24 +32,25 @@ import net.minecraft.world.WorldEvents;
  * An area-effect spell that summons the undead.
  */
 public class NecromancySpell extends AbstractAreaEffectSpell {
-    private final Weighted<EntityType<? extends LivingEntity>> spawnPool = new Weighted<EntityType<? extends LivingEntity>>()
+    private final Supplier<Optional<EntityType<? extends LivingEntity>>> spawnPool = new Weighted.Builder<EntityType<? extends LivingEntity>>()
             .put(7, EntityType.ZOMBIE)
             .put(4, EntityType.HUSK)
             .put(3, EntityType.DROWNED)
             .put(2, EntityType.ZOMBIFIED_PIGLIN)
-            .put(1, EntityType.ZOMBIE_VILLAGER);
+            .put(1, EntityType.ZOMBIE_VILLAGER)
+            .build();
 
     private final List<EntityReference<LivingEntity>> summonedEntities = new ArrayList<>();
 
     private int spawnCountdown;
 
-    protected NecromancySpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    protected NecromancySpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     @Override
     public boolean tick(Caster<?> source, Situation situation) {
-        float radius = (source.getLevel().get() + 1) * 4 + getTraits().get(Trait.POWER);
+        float radius = source.getLevel().getScaled(4) * 4 + getTraits().get(Trait.POWER);
 
         if (radius <= 0) {
             return false;

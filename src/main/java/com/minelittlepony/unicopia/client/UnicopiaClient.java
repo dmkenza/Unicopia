@@ -10,20 +10,22 @@ import com.minelittlepony.unicopia.Race;
 import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.client.gui.LanSettingsScreen;
 import com.minelittlepony.unicopia.client.gui.UHud;
-import com.minelittlepony.unicopia.client.minelittlepony.MineLPConnector;
-import com.minelittlepony.unicopia.container.SpellbookScreen;
-import com.minelittlepony.unicopia.container.UScreenHandlers;
+import com.minelittlepony.unicopia.client.gui.spellbook.SpellbookScreen;
+import com.minelittlepony.unicopia.client.minelittlepony.MineLPDelegate;
+import com.minelittlepony.unicopia.client.render.shader.ViewportShader;
+import com.minelittlepony.unicopia.container.*;
 import com.minelittlepony.unicopia.entity.player.PlayerCamera;
 import com.minelittlepony.unicopia.entity.player.Pony;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.item.v1.ItemTooltipCallback;
+import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.screen.OpenToLanScreen;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.HandledScreens;
-import net.minecraft.client.gui.screen.world.CreateWorldScreen;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.resource.ResourceType;
 import net.minecraft.text.Text;
 
 public class UnicopiaClient implements ClientModInitializer {
@@ -41,7 +43,7 @@ public class UnicopiaClient implements ClientModInitializer {
     public static Race getPreferredRace() {
         if (!Unicopia.getConfig().ignoreMineLP.get()
                 && MinecraftClient.getInstance().player != null) {
-            Race race = MineLPConnector.getPlayerPonyRace();
+            Race race = MineLPDelegate.getInstance().getPlayerPonyRace();
 
             if (!race.isDefault()) {
                 return race;
@@ -68,6 +70,8 @@ public class UnicopiaClient implements ClientModInitializer {
         ScreenInitCallback.EVENT.register(this::onScreenInit);
         ItemTooltipCallback.EVENT.register(new ModifierTooltipRenderer());
 
+        ResourceManagerHelper.get(ResourceType.CLIENT_RESOURCES).registerReloadListener(ViewportShader.INSTANCE);
+
         Unicopia.SIDE = () -> Optional.ofNullable(MinecraftClient.getInstance().player).map(Pony::of);
     }
 
@@ -77,9 +81,6 @@ public class UnicopiaClient implements ClientModInitializer {
     }
 
     private void onScreenInit(Screen screen, ButtonList buttons) {
-        if (screen instanceof CreateWorldScreen) {
-            buttons.addButton(LanSettingsScreen.createRaceSelector(screen));
-        }
         if (screen instanceof OpenToLanScreen) {
             buttons.addButton(new Button(screen.width / 2 - 155, 130, 150, 20))
                     .onClick(b -> MinecraftClient.getInstance().setScreen(new LanSettingsScreen(screen)))

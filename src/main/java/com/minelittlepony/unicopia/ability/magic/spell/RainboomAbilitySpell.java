@@ -2,25 +2,19 @@ package com.minelittlepony.unicopia.ability.magic.spell;
 
 import com.minelittlepony.unicopia.UTags;
 import com.minelittlepony.unicopia.ability.magic.Caster;
-import com.minelittlepony.unicopia.ability.magic.spell.effect.AbstractSpell;
-import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
-import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
+import com.minelittlepony.unicopia.ability.magic.spell.effect.*;
+import com.minelittlepony.unicopia.block.data.ModificationType;
 import com.minelittlepony.unicopia.entity.player.Pony;
-import com.minelittlepony.unicopia.particle.OrientedBillboardParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleHandle;
 import com.minelittlepony.unicopia.particle.UParticles;
 import com.minelittlepony.unicopia.util.MagicalDamageSource;
-import com.minelittlepony.unicopia.util.PosHelper;
 import com.minelittlepony.unicopia.util.shape.Shape;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.GameRules;
 
 /**
  * Internal.
@@ -29,15 +23,15 @@ import net.minecraft.world.GameRules;
  */
 public class RainboomAbilitySpell extends AbstractSpell {
 
-    private final int rad = 5;
-    private final Shape effect_range = new Sphere(false, rad);
+    private static final int RADIUS = 5;
+    private static final Shape EFFECT_RANGE = new Sphere(false, RADIUS);
 
     private final ParticleHandle particlEffect = new ParticleHandle();
 
     private int age;
 
-    public RainboomAbilitySpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    public RainboomAbilitySpell(CustomisedSpellType<?> type) {
+        super(type);
     }
 
     @Override
@@ -57,7 +51,8 @@ public class RainboomAbilitySpell extends AbstractSpell {
             particlEffect.update(getUuid(), source, spawner -> {
                 spawner.addParticle(UParticles.RAINBOOM_TRAIL, source.getOriginVector(), Vec3d.ZERO);
             });
-            source.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, source.getPhysics().getMotionAngle()), source.getOriginVector(), Vec3d.ZERO);
+
+           // source.addParticle(new OrientedBillboardParticleEffect(UParticles.RAINBOOM_RING, source.getPhysics().getMotionAngle()), source.getOriginVector(), Vec3d.ZERO);
         }
 
         LivingEntity owner = source.getMaster();
@@ -66,12 +61,12 @@ public class RainboomAbilitySpell extends AbstractSpell {
             return false;
         }
 
-        source.findAllEntitiesInRange(rad).forEach(e -> {
-            e.damage(MagicalDamageSource.create("rainboom", source), 6);
+        source.findAllEntitiesInRange(RADIUS).forEach(e -> {
+            e.damage(MagicalDamageSource.create("rainboom", source).setBreakSunglasses(), 6);
         });
-        PosHelper.getAllInRegionMutable(source.getOrigin(), effect_range).forEach(pos -> {
+        EFFECT_RANGE.translate(source.getOrigin()).getBlockPositions().forEach(pos -> {
             BlockState state = source.getReferenceWorld().getBlockState(pos);
-            if (state.isIn(UTags.FRAGILE) && canBreak(pos, owner)) {
+            if (state.isIn(UTags.FRAGILE) && source.canModifyAt(pos, ModificationType.PHYSICAL)) {
                 owner.world.breakBlock(pos, true);
             }
         });
@@ -84,20 +79,11 @@ public class RainboomAbilitySpell extends AbstractSpell {
         }
 
         source.getEntity().setVelocity(velocity);
-        if (source instanceof Pony) {
-            ((Pony)source).getMagicalReserves().getExhaustion().multiply(0.2F);
+        if (source instanceof Pony pony) {
+            pony.getMagicalReserves().getExhaustion().multiply(0.2F);
         }
 
-        return !source.getEntity().isRemoved() && age++ < 90 + 7 * (source.getLevel().get() + 1);
-    }
-
-    private boolean canBreak(BlockPos pos, LivingEntity entity) {
-
-        if (entity instanceof PlayerEntity) {
-            return entity.world.canPlayerModifyAt((PlayerEntity)entity, pos);
-        }
-
-        return entity.world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING);
+        return !source.getEntity().isRemoved() && age++ < 90 + 7 * source.getLevel().getScaled(9);
     }
 
     @Override

@@ -12,6 +12,7 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.SpellContainer;
 import com.minelittlepony.unicopia.ability.magic.SpellPredicate;
 import com.minelittlepony.unicopia.ability.magic.spell.Spell;
+import com.minelittlepony.unicopia.util.NbtSerialisable;
 
 import net.minecraft.entity.data.TrackedData;
 import net.minecraft.nbt.NbtCompound;
@@ -23,7 +24,7 @@ import net.minecraft.nbt.NbtCompound;
  *
  * @param <T> The owning entity
  */
-public class EffectSync implements SpellContainer {
+public class EffectSync implements SpellContainer, NbtSerialisable {
 
     private final NetworkedReferenceSet<Spell> spells;
 
@@ -51,9 +52,8 @@ public class EffectSync implements SpellContainer {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
     public <T extends Spell> Optional<T> get(@Nullable SpellPredicate<T> type, boolean update) {
-        return (Optional<T>)(read(type, update, true).findFirst());
+        return read(type, update, true).findFirst();
     }
 
     @Override
@@ -66,9 +66,9 @@ public class EffectSync implements SpellContainer {
     }
 
     @Override
-    public boolean removeIf(Predicate<Spell> test, boolean update) {
-        return reduce((initial, effect) -> {
-            if (!effect.findMatches(test).findFirst().isPresent()) {
+    public boolean removeWhere(Predicate<Spell> test, boolean update) {
+        return reduce(update, (initial, effect) -> {
+            if (!test.test(effect)) {
                 return initial;
             }
             spells.removeReference(effect);
@@ -78,7 +78,7 @@ public class EffectSync implements SpellContainer {
 
     @Override
     public boolean forEach(Function<Spell, Operation> test, boolean update) {
-        return reduce((initial, effect) -> {
+        return reduce(update, (initial, effect) -> {
             Operation op = test.apply(effect);
             if (op == Operation.REMOVE) {
                 spells.removeReference(effect);
@@ -91,7 +91,12 @@ public class EffectSync implements SpellContainer {
 
     @Override
     public Stream<Spell> stream(boolean update) {
-        return read(null, update, true);
+        return stream(null, update);
+    }
+
+    @Override
+    public <T extends Spell> Stream<T> stream(@Nullable SpellPredicate<T> type, boolean update) {
+        return read(type, update, true);
     }
 
     @Override
@@ -106,22 +111,21 @@ public class EffectSync implements SpellContainer {
         return false;
     }
 
-    private Stream<Spell> read(@Nullable SpellPredicate<?> type, boolean synchronize, boolean sendUpdate) {
+    @SuppressWarnings("unchecked")
+    private <T extends Spell> Stream<T> read(@Nullable SpellPredicate<T> type, boolean synchronize, boolean sendUpdate) {
         if (synchronize && spells.fromNbt(owner.getEntity().getDataTracker().get(param)) && sendUpdate) {
             owner.getEntity().getDataTracker().set(param, spells.toNbt());
         }
 
         if (type == null) {
-            return spells.getReferences();
+            return (Stream<T>)spells.getReferences();
         }
-        return spells.getReferences().flatMap(s -> s.findMatches(type));
+        return (Stream<T>)spells.getReferences().flatMap(s -> s.findMatches(type));
     }
 
-    public boolean reduce(Alteration alteration) {
-        spells.fromNbt(owner.getEntity().getDataTracker().get(param));
-
+    private boolean reduce(boolean update, Alteration alteration) {
         boolean initial = false;
-        for (Spell i : spells.getReferences().toList()) {
+        for (Spell i : read(null, update, false).toList()) {
             initial = alteration.apply(initial, i);
         }
 
@@ -135,11 +139,21 @@ public class EffectSync implements SpellContainer {
         }
     }
 
+    @Override
+    public void toNBT(NbtCompound compound) {
+        compound.put("spells", spells.toNbt());
+    }
+
+    @Override
+    public void fromNBT(NbtCompound compound) {
+        spells.fromNbt(compound.getCompound("spells"));
+    }
+
     public interface UpdateCallback {
         void onSpellSet(@Nullable Spell spell);
     }
 
     private interface Alteration {
-        boolean apply(boolean initial, Spell item);
+        boolean apply(boolean initial, Spell spell);
     }
 }

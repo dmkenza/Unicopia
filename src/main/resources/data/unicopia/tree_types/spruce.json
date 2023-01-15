@@ -2,9 +2,9 @@
 	"logs": [ "minecraft:spruce_log", "minecraft:spruce_wood" ],
 	"leaves": [ "minecraft:spruce_leaves" ],
 	"wideTrunk": true,
+	"rarity": 3,
 	"drops": [
-		{ "weight": 1, "item": "unicopia:sour_apple" },
-		{ "weight": 2, "item": "unicopia:green_apple" },
-		{ "weight": 4, "item": "unicopia:rotten_apple" }
+		{ "weight": 1, "item": "unicopia:pinecone" },
+		{ "weight": 4, "item": "unicopia:stick" }
 	]
 }

@@ -7,10 +7,12 @@ import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.Situation;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.SpellTraits;
 import com.minelittlepony.unicopia.ability.magic.spell.trait.Trait;
+import com.minelittlepony.unicopia.entity.player.Pony;
 import com.minelittlepony.unicopia.particle.MagicParticleEffect;
 import com.minelittlepony.unicopia.particle.ParticleHandle;
 import com.minelittlepony.unicopia.particle.SphereParticleEffect;
 import com.minelittlepony.unicopia.particle.UParticles;
+import com.minelittlepony.unicopia.particle.ParticleHandle.Attachment;
 import com.minelittlepony.unicopia.projectile.ProjectileUtil;
 import com.minelittlepony.unicopia.util.shape.Sphere;
 
@@ -21,6 +23,9 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.TntEntity;
 import net.minecraft.entity.Entity.RemovalReason;
 import net.minecraft.entity.decoration.ArmorStandEntity;
+import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.passive.PassiveEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.vehicle.AbstractMinecartEntity;
 import net.minecraft.entity.vehicle.BoatEntity;
 import net.minecraft.util.math.Vec3d;
@@ -37,8 +42,16 @@ public class ShieldSpell extends AbstractSpell {
 
     private final TargetSelecter targetSelecter = new TargetSelecter(this);
 
-    protected ShieldSpell(SpellType<?> type, SpellTraits traits) {
-        super(type, traits);
+    protected ShieldSpell(CustomisedSpellType<?> type) {
+        super(type);
+    }
+
+    @Override
+    public boolean apply(Caster<?> source) {
+        if (getTraits().get(Trait.GENEROSITY) > 0) {
+            return toPlaceable().apply(source);
+        }
+        return super.apply(source);
     }
 
     @Override
@@ -63,8 +76,7 @@ public class ShieldSpell extends AbstractSpell {
         particlEffect.update(getUuid(), source, spawner -> {
             spawner.addParticle(new SphereParticleEffect(UParticles.SPHERE, getType().getColor(), 0.3F, radius), origin, Vec3d.ZERO);
         }).ifPresent(p -> {
-            p.setAttribute(0, radius);
-            p.setAttribute(1, getType().getColor());
+            p.setAttribute(Attachment.ATTR_RADIUS, radius);
         });
     }
 
@@ -87,11 +99,11 @@ public class ShieldSpell extends AbstractSpell {
 
         long costMultiplier = applyEntities(source);
         if (costMultiplier > 0) {
-            double cost = 2 + source.getLevel().get();
+            double cost = 2 - source.getLevel().getScaled(2);
 
             cost *= costMultiplier / ((1 + source.getLevel().get()) * 3F);
-            cost /= 2.725D;
             cost /= knowledge;
+            cost += getDrawDropOffRange(source) / 10F;
 
             if (!source.subtractEnergyCost(cost)) {
                 setDead();
@@ -105,20 +117,34 @@ public class ShieldSpell extends AbstractSpell {
      * Calculates the maximum radius of the shield. aka The area of effect.
      */
     public double getDrawDropOffRange(Caster<?> source) {
-        float multiplier = source.getMaster() != null && source.getMaster().isSneaking() ? 1 : 2;
-        float min = 4 + getTraits().get(Trait.POWER);
-        return (min + (source.getLevel().get() * 2)) / multiplier;
+        float multiplier = source instanceof Pony pony && pony.getMaster().isSneaking() ? 1 : 2;
+        float min = (source instanceof Pony ? 4 : 6) + getTraits().get(Trait.POWER);
+        double range = (min + (source.getLevel().getScaled(source instanceof Pony ? 4 : 40) * (source instanceof Pony ? 2 : 10))) / multiplier;
+
+        return range;
     }
 
     protected boolean isValidTarget(Caster<?> source, Entity entity) {
-        return (entity instanceof LivingEntity
+        boolean valid = (entity instanceof LivingEntity
                 || entity instanceof TntEntity
                 || entity instanceof FallingBlockEntity
-                || entity instanceof EyeOfEnderEntity
-                || entity instanceof BoatEntity
                 || ProjectileUtil.isFlyingProjectile(entity)
                 || entity instanceof AbstractMinecartEntity)
-            && !(entity instanceof ArmorStandEntity);
+            && !(  entity instanceof ArmorStandEntity
+                || entity instanceof EyeOfEnderEntity
+                || entity instanceof BoatEntity
+        );
+
+        if (getTraits().get(Trait.LIFE) > 0) {
+            valid &= !(entity instanceof PassiveEntity);
+        }
+        if (getTraits().get(Trait.BLOOD) > 0) {
+            valid &= !(entity instanceof HostileEntity);
+        }
+        if (getTraits().get(Trait.ICE) > 0) {
+            valid &= !(entity instanceof PlayerEntity);
+        }
+        return valid;
     }
 
     protected long applyEntities(Caster<?> source) {

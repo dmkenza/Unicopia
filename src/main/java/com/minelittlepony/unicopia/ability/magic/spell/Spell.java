@@ -7,6 +7,7 @@ import java.util.stream.Stream;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.include.com.google.common.base.Objects;
 
+import com.minelittlepony.unicopia.Unicopia;
 import com.minelittlepony.unicopia.ability.magic.Affine;
 import com.minelittlepony.unicopia.ability.magic.Caster;
 import com.minelittlepony.unicopia.ability.magic.spell.effect.SpellType;
@@ -19,11 +20,17 @@ import net.minecraft.nbt.NbtCompound;
  * Interface for a magic spells
  */
 public interface Spell extends NbtSerialisable, Affine {
+    Serializer<Spell> SERIALIZER = Serializer.of(Spell::readNbt, Spell::writeNbt);
 
     /**
      * Returns the registered type of this spell.
      */
     SpellType<?> getType();
+
+    /**
+     * Gets the traits of this spell.
+     */
+    SpellTraits getTraits();
 
     /**
      * The unique id of this particular spell instance.
@@ -85,19 +92,10 @@ public interface Spell extends NbtSerialisable, Affine {
     void onDestroyed(Caster<?> caster);
 
     /**
-     * Used by crafting to combine two spells into one.
-     *
-     * Returns a compound spell representing the union of this and the other spell.
-     */
-    default Spell combineWith(Spell other) {
-        return SpellType.COMPOUND_SPELL.create(SpellTraits.EMPTY).combineWith(this).combineWith(other);
-    }
-
-    /**
      * Converts this spell into a placeable spell.
      */
     default PlaceableSpell toPlaceable() {
-        return SpellType.PLACED_SPELL.create(SpellTraits.EMPTY).setSpell(this);
+        return SpellType.PLACED_SPELL.withTraits().create().setSpell(this);
     }
 
     /**
@@ -105,19 +103,23 @@ public interface Spell extends NbtSerialisable, Affine {
      * @return
      */
     default ThrowableSpell toThrowable() {
-        return SpellType.THROWN_SPELL.create(SpellTraits.EMPTY).setSpell(this);
+        return SpellType.THROWN_SPELL.withTraits().create().setSpell(this);
     }
 
     @Nullable
     static Spell readNbt(@Nullable NbtCompound compound) {
-        if (compound != null && compound.contains("effect_id")) {
-            Spell effect = SpellType.getKey(compound).create(SpellTraits.EMPTY);
+        try {
+            if (compound != null && compound.contains("effect_id")) {
+                Spell effect = SpellType.getKey(compound).withTraits().create();
 
-            if (effect != null) {
-                effect.fromNBT(compound);
+                if (effect != null) {
+                    effect.fromNBT(compound);
+                }
+
+                return effect;
             }
-
-            return effect;
+        } catch (Exception e) {
+            Unicopia.LOGGER.fatal("Invalid spell nbt {}", e);
         }
 
         return null;

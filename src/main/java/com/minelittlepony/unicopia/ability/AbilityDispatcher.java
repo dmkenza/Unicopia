@@ -44,9 +44,10 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
         }
     }
 
-    private boolean triggerQuickAction(Ability<?> ability, ActivationType pressType) {
-        if (ability.onQuickAction(player, pressType)) {
-            Channel.CLIENT_PLAYER_ABILITY.send(new MsgPlayerAbility<>(ability, null, pressType));
+    private <T extends Hit> boolean triggerQuickAction(Ability<T> ability, ActivationType pressType) {
+        Optional<T> data = ability.prepareQuickAction(player, pressType);
+        if (ability.onQuickAction(player, pressType, data)) {
+            Channel.CLIENT_PLAYER_ABILITY.send(new MsgPlayerAbility<>(ability, data, pressType));
             return true;
         }
         return false;
@@ -206,9 +207,9 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
                 setCooldown(ability.getCooldownTime(player));
 
                 if (player.isClientPlayer()) {
-                    T data = ability.tryActivate(player);
+                    Optional<T> data = ability.prepare(player);
 
-                    if (data != null) {
+                    if (data.isPresent()) {
                         Channel.CLIENT_PLAYER_ABILITY.send(new MsgPlayerAbility<>(ability, data, ActivationType.NONE));
                     } else {
                         player.getEntity().playSound(USounds.GUI_ABILITY_FAIL, 1, 1);
@@ -223,7 +224,7 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
         }
 
         public Optional<Ability<?>> getAbility(long page) {
-            List<Ability<?>> found = Abilities.BY_SLOT_AND_RACE.apply(slot, player.getSpecies());
+            List<Ability<?>> found = Abilities.BY_SLOT_AND_COMPOSITE_RACE.apply(slot, player.getCompositeRace());
             if (found.isEmpty()) {
                 return Optional.empty();
             }
@@ -232,7 +233,7 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
         }
 
         public long getMaxPage() {
-            return Abilities.BY_SLOT_AND_RACE.apply(slot, player.getSpecies()).size();
+            return Abilities.BY_SLOT_AND_COMPOSITE_RACE.apply(slot, player.getCompositeRace()).size();
         }
 
         protected synchronized Optional<Ability<?>> setActiveAbility(@Nullable Ability<?> power) {
@@ -248,7 +249,7 @@ public class AbilityDispatcher implements Tickable, NbtSerialisable {
 
         protected synchronized Optional<Ability<?>> getActiveAbility() {
             return activeAbility.filter(ability -> {
-                return (!(ability == null || (triggered && warmup == 0 && cooldown == 0)) && ability.canUse(player.getSpecies()));
+                return (!(ability == null || (triggered && warmup == 0 && cooldown == 0)) && player.getCompositeRace().any(ability::canUse));
             });
         }
 
